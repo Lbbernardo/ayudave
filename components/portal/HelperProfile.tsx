@@ -11,7 +11,7 @@ import LoadingState from "@/components/ui/LoadingState";
 import LocationButton from "@/components/forms/LocationButton";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import {
-  SKILL_OPTIONS,
+  CAPABILITIES,
   DONATION_TYPES,
   type Donation,
   type Volunteer,
@@ -78,8 +78,10 @@ function VolunteerEditor({
   onSaved: () => void;
 }) {
   const [open, setOpen] = useState(Boolean(row));
-  const [skills, setSkills] = useState<string[]>(
-    row?.skills ? row.skills.split(",").map((s) => s.trim()).filter(Boolean) : []
+  const [caps, setCaps] = useState<string[]>(
+    row?.capabilities
+      ? row.capabilities.split(",").map((s) => s.trim()).filter(Boolean)
+      : []
   );
   const [hasVehicle, setHasVehicle] = useState(row?.has_vehicle ?? false);
   const [coords, setCoords] = useState<Coords>({
@@ -90,8 +92,8 @@ function VolunteerEditor({
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
-  function toggleSkill(s: string) {
-    setSkills((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  function toggleCap(v: string) {
+    setCaps((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
   }
 
   async function save(ev: FormEvent<HTMLFormElement>) {
@@ -111,7 +113,7 @@ function VolunteerEditor({
       phone: String(data.get("phone") || "").trim() || null,
       state: String(data.get("state") || "").trim() || null,
       city: String(data.get("city") || "").trim() || null,
-      skills: skills.join(", "),
+      capabilities: caps.join(", "),
       has_vehicle: hasVehicle,
       availability: String(data.get("availability") || "").trim() || null,
       latitude: coords.latitude,
@@ -154,15 +156,15 @@ function VolunteerEditor({
         </div>
       </Card>
       <Card className="space-y-3">
-        <p className="text-sm font-semibold text-gray-800">Habilidades</p>
+        <p className="text-sm font-semibold text-gray-800">¿Qué puedes ofrecer?</p>
         <div className="flex flex-wrap gap-2">
-          {SKILL_OPTIONS.map((s) => {
-            const active = skills.includes(s);
+          {CAPABILITIES.map((cap) => {
+            const active = caps.includes(cap.value);
             return (
               <button
-                key={s}
+                key={cap.value}
                 type="button"
-                onClick={() => toggleSkill(s)}
+                onClick={() => toggleCap(cap.value)}
                 className={
                   active
                     ? "rounded-full border-2 border-trust bg-trust/10 px-3 py-1.5 text-sm font-semibold text-trust"
@@ -170,7 +172,7 @@ function VolunteerEditor({
                 }
               >
                 {active ? "✓ " : ""}
-                {s}
+                {cap.label}
               </button>
             );
           })}

@@ -21,6 +21,7 @@ import {
   type Volunteer,
 } from "@/lib/types";
 import {
+  autoAssignReport,
   markReportAttended,
   reassignReport,
   unassignReport,
@@ -174,6 +175,7 @@ export default function AdminReportesPage() {
                   <th className="px-3 py-2">Tipo</th>
                   <th className="px-3 py-2">Urgencia</th>
                   <th className="px-3 py-2">Asignado a</th>
+                  <th className="px-3 py-2">Score</th>
                   <th className="px-3 py-2">Distancia</th>
                   <th className="px-3 py-2">Asignación</th>
                   <th className="px-3 py-2">Status</th>
@@ -215,6 +217,9 @@ export default function AdminReportesPage() {
                           "—"
                         )}
                       </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        {r.match_score != null ? `${r.match_score}/100` : "—"}
+                      </td>
                       <td className="whitespace-nowrap px-3 py-2 text-gray-700">
                         {r.distance_km != null ? `${r.distance_km} km` : "—"}
                       </td>
@@ -239,14 +244,25 @@ export default function AdminReportesPage() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-col gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy}
-                            onClick={() => runAction(r.id, () => reassignReport(r.id))}
-                          >
-                            Reasignar
-                          </Button>
+                          {r.assigned_to_id ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy}
+                              onClick={() => runAction(r.id, () => reassignReport(r.id))}
+                            >
+                              Reasignar
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              disabled={busy}
+                              onClick={() => runAction(r.id, () => autoAssignReport(r.id))}
+                            >
+                              Buscar match
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="safe"

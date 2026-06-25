@@ -12,18 +12,22 @@
 
 import { getSupabaseClient } from "@/lib/supabase/client";
 import {
+  DONATION_TO_CAPABILITY,
   MAX_ACTIVE_CASES_DONOR,
   MAX_ACTIVE_CASES_VOLUNTEER,
   MEDICAL_SKILLS,
+  NEED_TO_CAPABILITY,
   type AssignedToType,
   type Donation,
   type Report,
   type Volunteer,
 } from "@/lib/types";
 import {
-  notifyAdminUnassignedCase,
-  notifyDonorAssignment,
-  notifyVolunteerAssignment,
+  notifyAdminNoMatchFound,
+  notifyHelperNewMatch,
+  notifyMatchAccepted,
+  notifyMatchCompleted,
+  notifyRequesterMatchFound,
 } from "@/lib/notifications";
 
 // Estados de asignación que cuentan como "caso activo" (ocupan un cupo).
@@ -82,9 +86,6 @@ async function getHelperUserId(
   return (data as { user_id: string | null } | null)?.user_id ?? null;
 }
 
-// Tipos de ayuda que solo puede atender un voluntario (no un donante).
-const VOLUNTEER_ONLY_HELP = new Set(["Médica", "Atrapado", "Transporte"]);
-
 export interface MatchCandidate {
   type: Exclude<AssignedToType, "admin">; // 'volunteer' | 'donor'
   id: string;
@@ -94,8 +95,9 @@ export interface MatchCandidate {
   state: string | null;
   distanceKm: number | null; // null cuando el match fue por ciudad/estado
   geoRank: number; // 0 = coordenadas, 1 = misma ciudad, 2 = mismo estado
-  compatible: boolean; // coincide con el tipo de ayuda (skill / vehículo / donación)
+  compatible: boolean; // coincide con el tipo de ayuda (capacidad / donación)
   activeCases: number;
+  score: number; // puntuación de compatibilidad 0-100
 }
 
 export interface AutoAssignResult {
@@ -189,9 +191,9 @@ function geoMatch(
   return null;
 }
 
-/** Compara dos candidatos: el "menor" es el mejor. */
+/** Compara dos candidatos: el "menor" es el mejor (mayor score primero). */
 function compareCandidates(a: MatchCandidate, b: MatchCandidate): number {
-  if (a.compatible !== b.compatible) return a.compatible ? -1 : 1;
+  if (a.score !== b.score) return b.score - a.score; // mayor puntuación primero
   if (a.geoRank !== b.geoRank) return a.geoRank - b.geoRank;
   const da = a.distanceKm ?? Number.POSITIVE_INFINITY;
   const db = b.distanceKm ?? Number.POSITIVE_INFINITY;
@@ -215,108 +217,177 @@ async function getActiveCounts(): Promise<Map<string, number>> {
   return counts;
 }
 
-function volunteerCompatible(helpType: string, v: Volunteer): boolean {
-  if (helpType === "Médica") {
-    const skills = (v.skills || "").toLowerCase();
-    return MEDICAL_SKILLS.some((s) => skills.includes(s.toLowerCase()));
-  }
-  if (helpType === "Transporte") return Boolean(v.has_vehicle);
-  return true; // cualquier voluntario puede ayudar con el resto
+function splitTags(s: string | null | undefined): string[] {
+  return (s || "").split(",").map((x) => x.trim()).filter(Boolean);
 }
 
-function donorCompatible(helpType: string, d: Donation): boolean {
-  // donation_type puede traer varios tipos separados por coma (ej: "Agua, Medicinas").
-  return (d.donation_type || "")
-    .split(",")
-    .some((t) => sameText(helpType, t));
+/** Capacidades que satisfacen una necesidad (según su tipo de ayuda). */
+export function getNeedTags(report: Pick<Report, "help_type">): string[] {
+  return NEED_TO_CAPABILITY[report.help_type] ?? [];
+}
+
+/** Capacidades que ofrece un ayudante (voluntario o donante). */
+export function getHelperTags(
+  helper: Volunteer | Donation,
+  type: MatchCandidate["type"]
+): string[] {
+  const tags = new Set<string>();
+  if (type === "volunteer") {
+    const v = helper as Volunteer;
+    for (const c of splitTags(v.capabilities)) tags.add(c);
+    // Compatibilidad con datos antiguos:
+    const skills = (v.skills || "").toLowerCase();
+    if (MEDICAL_SKILLS.some((s) => skills.includes(s.toLowerCase())))
+      tags.add("medico");
+    if (v.has_vehicle) {
+      tags.add("transporte_personas");
+      tags.add("transporte_carga");
+    }
+  } else {
+    const d = helper as Donation;
+    for (const t of splitTags(d.donation_type)) {
+      const tag = DONATION_TO_CAPABILITY[t];
+      if (tag) tags.add(tag);
+    }
+  }
+  return [...tags];
+}
+
+/**
+ * Puntuación de compatibilidad 0-100. Reglas simples y explícitas (sin IA).
+ */
+export function calculateCompatibilityScore(opts: {
+  needTags: string[];
+  helperTags: string[];
+  sameCity: boolean;
+  sameState: boolean;
+  distanceKm: number | null;
+  hasVehicle: boolean;
+  activeCases: number;
+}): { score: number; capMatch: boolean } {
+  const { needTags, helperTags, sameCity, sameState, distanceKm, hasVehicle, activeCases } = opts;
+  let score = 0;
+
+  // Compatibilidad de la necesidad con lo que ofrece.
+  const capMatch =
+    needTags.length === 0 ? true : needTags.some((t) => helperTags.includes(t));
+  if (needTags.length === 0)
+    score += 20; // "Otro": cualquiera puede ayudar
+  else if (capMatch) score += 50; // tiene justo lo que se necesita
+
+  // Cercanía.
+  if (sameCity) score += 25;
+  else if (sameState) score += 15;
+  if (distanceKm != null) {
+    if (distanceKm < 10) score += 20;
+    else if (distanceKm < 25) score += 10;
+  }
+
+  // Otros factores.
+  if (hasVehicle) score += 10;
+  if (activeCases >= 2) score -= 30; // ya tiene varios casos activos
+
+  return { score: Math.max(0, Math.min(100, score)), capMatch };
 }
 
 // ---------------------------------------------------------------------
 // 3 y 4. Mejor voluntario / mejor donante para un reporte
 // ---------------------------------------------------------------------
 
-/** Devuelve el mejor voluntario disponible para el reporte, o null. */
+/** Construye un candidato puntuado a partir de un ayudante elegible. */
+function buildCandidate(
+  report: Report,
+  helper: Volunteer | Donation,
+  type: MatchCandidate["type"],
+  geo: { geoRank: number; distanceKm: number | null },
+  activeCases: number
+): MatchCandidate {
+  const hasVehicle = type === "volunteer" ? Boolean((helper as Volunteer).has_vehicle) : false;
+  const { score, capMatch } = calculateCompatibilityScore({
+    needTags: getNeedTags(report),
+    helperTags: getHelperTags(helper, type),
+    sameCity: sameText(report.city, helper.city),
+    sameState: sameText(report.state, helper.state),
+    distanceKm: geo.distanceKm,
+    hasVehicle,
+    activeCases,
+  });
+  return {
+    type,
+    id: helper.id,
+    name: type === "volunteer" ? (helper as Volunteer).full_name : (helper as Donation).donor_name,
+    phone: helper.phone,
+    city: helper.city,
+    state: helper.state,
+    distanceKm: geo.distanceKm,
+    geoRank: geo.geoRank,
+    compatible: capMatch,
+    activeCases,
+    score,
+  };
+}
+
+/**
+ * Devuelve los mejores ayudantes (voluntarios + donantes) para una necesidad,
+ * ya puntuados (0-100) y ordenados de mejor a peor. Solo incluye candidatos
+ * compatibles, disponibles, no inactivos y bajo su máximo de casos.
+ */
+export async function findBestHelpersForNeed(
+  report: Report,
+  opts?: { excludeIds?: Set<string>; counts?: Map<string, number> }
+): Promise<MatchCandidate[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
+  const excludeIds = opts?.excludeIds ?? new Set<string>();
+  const counts = opts?.counts ?? (await getActiveCounts());
+
+  const [vRes, dRes] = await Promise.all([
+    supabase.from("volunteers").select("*").neq("status", "inactivo"),
+    supabase.from("donations").select("*").neq("status", "inactivo"),
+  ]);
+
+  const candidates: MatchCandidate[] = [];
+
+  for (const v of (vRes.data as Volunteer[]) || []) {
+    if (excludeIds.has(v.id)) continue;
+    const active = counts.get(`volunteer:${v.id}`) ?? 0;
+    if (active >= (v.max_active_cases ?? MAX_ACTIVE_CASES_VOLUNTEER)) continue;
+    const geo = geoMatch(report, v);
+    if (!geo) continue;
+    candidates.push(buildCandidate(report, v, "volunteer", geo, active));
+  }
+  for (const d of (dRes.data as Donation[]) || []) {
+    if (excludeIds.has(d.id)) continue;
+    const active = counts.get(`donor:${d.id}`) ?? 0;
+    if (active >= (d.max_active_cases ?? MAX_ACTIVE_CASES_DONOR)) continue;
+    const geo = geoMatch(report, d);
+    if (!geo) continue;
+    candidates.push(buildCandidate(report, d, "donor", geo, active));
+  }
+
+  // Solo candidatos realmente compatibles con la necesidad y con score positivo.
+  const viable = candidates.filter((c) => c.compatible && c.score > 0);
+  viable.sort(compareCandidates);
+  return viable;
+}
+
+/** Mejor voluntario para el reporte (o null). */
 export async function findBestVolunteerForReport(
   report: Report,
   opts?: { excludeIds?: Set<string>; counts?: Map<string, number> }
 ): Promise<MatchCandidate | null> {
-  const supabase = getSupabaseClient();
-  if (!supabase) return null;
-
-  const excludeIds = opts?.excludeIds ?? new Set<string>();
-  const counts = opts?.counts ?? (await getActiveCounts());
-
-  const { data } = await supabase
-    .from("volunteers")
-    .select("*")
-    .neq("status", "inactivo"); // no asignar voluntarios inactivos
-
-  const candidates: MatchCandidate[] = [];
-  for (const v of (data as Volunteer[]) || []) {
-    if (excludeIds.has(v.id)) continue;
-    const active = counts.get(`volunteer:${v.id}`) ?? 0;
-    const max = v.max_active_cases ?? MAX_ACTIVE_CASES_VOLUNTEER;
-    if (active >= max) continue; // ya tiene demasiados casos
-    const geo = geoMatch(report, v);
-    if (!geo) continue;
-    candidates.push({
-      type: "volunteer",
-      id: v.id,
-      name: v.full_name,
-      phone: v.phone,
-      city: v.city,
-      state: v.state,
-      distanceKm: geo.distanceKm,
-      geoRank: geo.geoRank,
-      compatible: volunteerCompatible(report.help_type, v),
-      activeCases: active,
-    });
-  }
-
-  candidates.sort(compareCandidates);
-  return candidates[0] ?? null;
+  const all = await findBestHelpersForNeed(report, opts);
+  return all.find((c) => c.type === "volunteer") ?? null;
 }
 
-/** Devuelve el mejor donante disponible para el reporte, o null. */
+/** Mejor donante para el reporte (o null). */
 export async function findBestDonorForReport(
   report: Report,
   opts?: { excludeIds?: Set<string>; counts?: Map<string, number> }
 ): Promise<MatchCandidate | null> {
-  const supabase = getSupabaseClient();
-  if (!supabase) return null;
-
-  const excludeIds = opts?.excludeIds ?? new Set<string>();
-  const counts = opts?.counts ?? (await getActiveCounts());
-
-  const { data } = await supabase
-    .from("donations")
-    .select("*")
-    .neq("status", "inactivo"); // no asignar donantes inactivos
-
-  const candidates: MatchCandidate[] = [];
-  for (const d of (data as Donation[]) || []) {
-    if (excludeIds.has(d.id)) continue;
-    const active = counts.get(`donor:${d.id}`) ?? 0;
-    const max = d.max_active_cases ?? MAX_ACTIVE_CASES_DONOR;
-    if (active >= max) continue;
-    const geo = geoMatch(report, d);
-    if (!geo) continue;
-    candidates.push({
-      type: "donor",
-      id: d.id,
-      name: d.donor_name,
-      phone: d.phone,
-      city: d.city,
-      state: d.state,
-      distanceKm: geo.distanceKm,
-      geoRank: geo.geoRank,
-      compatible: donorCompatible(report.help_type, d),
-      activeCases: active,
-    });
-  }
-
-  candidates.sort(compareCandidates);
-  return candidates[0] ?? null;
+  const all = await findBestHelpersForNeed(report, opts);
+  return all.find((c) => c.type === "donor") ?? null;
 }
 
 // ---------------------------------------------------------------------
@@ -352,19 +423,10 @@ export async function autoAssignReport(reportId: string): Promise<AutoAssignResu
   );
 
   const counts = await getActiveCounts();
-  const allowDonors = !VOLUNTEER_ONLY_HELP.has(r.help_type);
 
-  // 2-7. Buscar el mejor de cada tipo y comparar.
-  const [bestVolunteer, bestDonor] = await Promise.all([
-    findBestVolunteerForReport(r, { excludeIds, counts }),
-    allowDonors
-      ? findBestDonorForReport(r, { excludeIds, counts })
-      : Promise.resolve(null),
-  ]);
-
-  const pool = [bestVolunteer, bestDonor].filter(Boolean) as MatchCandidate[];
-  pool.sort(compareCandidates);
-  const best = pool[0];
+  // 2-8. Buscar y puntuar candidatos (voluntarios + donantes). El mejor es el primero.
+  const candidates = await findBestHelpersForNeed(r, { excludeIds, counts });
+  const best = candidates[0];
 
   const summary = {
     id: r.id,
@@ -385,18 +447,20 @@ export async function autoAssignReport(reportId: string): Promise<AutoAssignResu
         assigned_to_id: null,
         assigned_at: null,
         distance_km: null,
+        match_score: null,
       })
       .eq("id", reportId);
-    notifyAdminUnassignedCase(summary);
+    notifyAdminNoMatchFound(summary);
     return { assigned: false, demo: false };
   }
 
-  // 8-9. Crear la asignación.
+  // 9. Crear el match (assignment) con su puntuación.
   await supabase.from("assignments").insert({
     report_id: reportId,
     assigned_to_type: best.type,
     assigned_to_id: best.id,
     distance_km: best.distanceKm,
+    score: best.score,
     status: "asignado",
   });
 
@@ -410,14 +474,15 @@ export async function autoAssignReport(reportId: string): Promise<AutoAssignResu
       assignment_status: "asignado",
       status: "asignado",
       distance_km: best.distanceKm,
+      match_score: best.score,
     })
     .eq("id", reportId);
 
   // Notificar (placeholder externo: console.log para futuro WhatsApp/SMS).
   const contact = { name: best.name, phone: best.phone };
-  const reportForNotify = { ...summary, distanceKm: best.distanceKm };
-  if (best.type === "volunteer") notifyVolunteerAssignment(contact, reportForNotify);
-  else notifyDonorAssignment(contact, reportForNotify);
+  const reportForNotify = { ...summary, distanceKm: best.distanceKm, score: best.score };
+  notifyHelperNewMatch(contact, reportForNotify);
+  notifyRequesterMatchFound(summary, best.name);
 
   // Timeline + notificación in-app (portal).
   const zona = `${r.city ?? "—"}, ${r.state ?? "—"}`;
@@ -510,6 +575,8 @@ async function setAssignmentAndReport(
     assignmentStatus,
     "ayudante"
   );
+  if (assignmentStatus === "aceptado") notifyMatchAccepted(reportId);
+  if (assignmentStatus === "completado") notifyMatchCompleted(reportId);
 }
 
 /** El voluntario/donante acepta el caso. */

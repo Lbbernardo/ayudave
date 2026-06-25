@@ -9,7 +9,7 @@ import Textarea from "@/components/ui/Textarea";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LocationButton from "@/components/forms/LocationButton";
 import { insertRow } from "@/lib/submit";
-import { SKILL_OPTIONS, DONATION_TYPES } from "@/lib/types";
+import { CAPABILITIES, DONATION_TYPES } from "@/lib/types";
 
 const AVAILABILITY = [
   "Inmediata",
@@ -37,7 +37,7 @@ export default function HelperOnboarding({
   onDone: () => void;
 }) {
   const [mode, setMode] = useState<Mode>(null);
-  const [skills, setSkills] = useState<string[]>([]);
+  const [caps, setCaps] = useState<string[]>([]);
   const [hasVehicle, setHasVehicle] = useState(false);
   const [coords, setCoords] = useState<{
     latitude: number | null;
@@ -46,9 +46,9 @@ export default function HelperOnboarding({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  function toggleSkill(skill: string) {
-    setSkills((prev) =>
-      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+  function toggleCap(value: string) {
+    setCaps((prev) =>
+      prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]
     );
   }
 
@@ -66,7 +66,7 @@ export default function HelperOnboarding({
       phone: String(data.get("phone") || "").trim() || null,
       state: String(data.get("state") || "").trim() || null,
       city: String(data.get("city") || "").trim() || null,
-      skills: skills.join(", "),
+      capabilities: caps.join(", "),
       has_vehicle: hasVehicle,
       availability: String(data.get("availability") || "").trim() || null,
       latitude: coords.latitude,
@@ -186,15 +186,17 @@ export default function HelperOnboarding({
             </div>
           </Card>
           <Card className="space-y-3">
-            <p className="text-sm font-semibold text-gray-800">Habilidades</p>
+            <p className="text-sm font-semibold text-gray-800">
+              ¿Qué puedes ofrecer? <span className="text-gray-500">(elige todo lo que apliques)</span>
+            </p>
             <div className="flex flex-wrap gap-2">
-              {SKILL_OPTIONS.map((skill) => {
-                const active = skills.includes(skill);
+              {CAPABILITIES.map((cap) => {
+                const active = caps.includes(cap.value);
                 return (
                   <button
-                    key={skill}
+                    key={cap.value}
                     type="button"
-                    onClick={() => toggleSkill(skill)}
+                    onClick={() => toggleCap(cap.value)}
                     className={
                       active
                         ? "rounded-full border-2 border-trust bg-trust/10 px-3 py-1.5 text-sm font-semibold text-trust"
@@ -202,7 +204,7 @@ export default function HelperOnboarding({
                     }
                   >
                     {active ? "✓ " : ""}
-                    {skill}
+                    {cap.label}
                   </button>
                 );
               })}

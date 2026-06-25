@@ -226,6 +226,7 @@ export default function AdminAsignacionesPage() {
                         <th className="px-3 py-2">Tipo</th>
                         <th className="px-3 py-2">Zona</th>
                         <th className="px-3 py-2">Asignado a</th>
+                        <th className="px-3 py-2">Score</th>
                         <th className="px-3 py-2">Distancia</th>
                         <th className="px-3 py-2">Asignación</th>
                       </tr>
@@ -247,6 +248,9 @@ export default function AdminAsignacionesPage() {
                             <span className="text-xs text-gray-500">
                               ({r.assigned_to_type === "donor" ? "Donante" : "Voluntario"})
                             </span>
+                          </td>
+                          <td className="px-3 py-2 text-gray-700">
+                            {r.match_score != null ? `${r.match_score}/100` : "—"}
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-gray-700">
                             {r.distance_km != null ? `${r.distance_km} km` : "—"}
