@@ -81,15 +81,8 @@ export default function LoginPage() {
               {submitting ? "Enviando…" : "Enviarme el enlace de acceso"}
             </Button>
             <p className="text-center text-xs text-gray-500">
-              ¿Aún no te registras como voluntario o donante? Hazlo en{" "}
-              <a href="/voluntario" className="font-semibold text-trust underline">
-                Voluntario
-              </a>{" "}
-              o{" "}
-              <a href="/donar" className="font-semibold text-trust underline">
-                Donar
-              </a>
-              .
+              ¿Primera vez? Con este mismo paso entras y luego podrás registrarte
+              como voluntario o donante dentro del portal.
             </p>
           </Card>
         </form>

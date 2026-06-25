@@ -162,12 +162,14 @@ export default function PanelPage() {
         )}
         <Card className="space-y-3 text-center">
           <p className="text-gray-700">
-            Inicia sesión para ver los casos que te fueron asignados, tu línea de
-            tiempo y tus notificaciones.
+            ¿Quieres ayudar como <strong>voluntario</strong> o{" "}
+            <strong>donante</strong>? Inicia sesión con tu correo: dentro podrás
+            registrarte y gestionar tus casos, con notificaciones en vivo. Sin
+            contraseñas.
           </p>
           <Link href="/login">
             <Button variant="primary" size="lg" fullWidth>
-              Entrar con mi correo
+              Entrar / registrarme con mi correo
             </Button>
           </Link>
         </Card>

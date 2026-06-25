@@ -26,24 +26,10 @@ const actions = [
     accent: "border-trust/30 hover:border-trust bg-trust/5",
   },
   {
-    href: "/voluntario",
-    title: "Soy voluntario",
-    description: "Regístrate para ayudar con tus habilidades o vehículo.",
+    href: "/panel",
+    title: "Quiero ayudar o donar",
+    description: "Inicia sesión para registrarte como voluntario o donante y gestionar tus casos.",
     icon: "🤝",
-    accent: "border-trust/30 hover:border-trust bg-trust/5",
-  },
-  {
-    href: "/donar",
-    title: "Quiero donar",
-    description: "Ofrece agua, comida, medicinas, transporte o refugio.",
-    icon: "🎁",
-    accent: "border-warning-dark/30 hover:border-warning-dark bg-warning/10",
-  },
-  {
-    href: "/mi-ayuda",
-    title: "Mis casos",
-    description: "¿Eres voluntario o donante? Ingresa tu teléfono y revisa los casos asignados.",
-    icon: "📋",
     accent: "border-trust/30 hover:border-trust bg-trust/5",
   },
   {
