@@ -14,6 +14,7 @@ import LocationButton from "@/components/forms/LocationButton";
 import FormSuccess from "@/components/forms/FormSuccess";
 import { insertRowReturning } from "@/lib/submit";
 import { autoAssignReport } from "@/lib/matching";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { HELP_TYPES, URGENCY_OPTIONS } from "@/lib/types";
 
 interface Coords {
@@ -31,6 +32,8 @@ export default function ReportarAyudaPage() {
   const [success, setSuccess] = useState(false);
   const [demo, setDemo] = useState(false);
   const [assigned, setAssigned] = useState<boolean | null>(null);
+  const [trackToken, setTrackToken] = useState<string | null>(null);
+  const [emailGiven, setEmailGiven] = useState(false);
   const [serverError, setServerError] = useState("");
   const [formKey, setFormKey] = useState(0);
 
@@ -84,8 +87,34 @@ export default function ReportarAyudaPage() {
       return;
     }
 
+    // Seguimiento por correo (mejor esfuerzo; requiere migración 0006).
+    // No incluimos email/token en el INSERT para no romper si la migración
+    // aún no se corrió; los guardamos/leemos después.
+    const email = String(data.get("email") || "").trim();
+    let token: string | null = null;
+    if (res.id) {
+      const sb = getSupabaseClient();
+      if (sb) {
+        if (email) await sb.from("reports").update({ email }).eq("id", res.id);
+        const { data: tk } = await sb
+          .from("reports")
+          .select("tracking_token")
+          .eq("id", res.id)
+          .single();
+        token = (tk as { tracking_token?: string } | null)?.tracking_token ?? null;
+      }
+    }
+    if (email && token) {
+      const trackingUrl = `${window.location.origin}/seguir/${token}`;
+      // Dispara y olvida: si el correo falla, el enlace igual se muestra en pantalla.
+      fetch("/api/track-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, trackingUrl, helpType: payload.help_type }),
+      }).catch(() => {});
+    }
+
     // El reporte se guardó: intentamos asignarlo automáticamente.
-    // Si falla la asignación, el reporte igual quedó guardado.
     let wasAssigned: boolean | null = null;
     if (res.id) {
       try {
@@ -99,12 +128,16 @@ export default function ReportarAyudaPage() {
     setSubmitting(false);
     setDemo(res.demo);
     setAssigned(wasAssigned);
+    setTrackToken(token);
+    setEmailGiven(Boolean(email));
     setSuccess(true);
   }
 
   function reset() {
     setSuccess(false);
     setAssigned(null);
+    setTrackToken(null);
+    setEmailGiven(false);
     setErrors({});
     setCoords({ latitude: null, longitude: null });
     setServerError("");
@@ -138,6 +171,15 @@ export default function ReportarAyudaPage() {
               cercana disponible. Un coordinador podrá revisarlo.
             </AlertBanner>
           )}
+          {trackToken && (
+            <AlertBanner tone="info">
+              🔎 Sigue tu caso aquí:{" "}
+              <a href={`/seguir/${trackToken}`} className="font-semibold underline">
+                ver el estado de mi caso
+              </a>
+              .{emailGiven && " También te enviamos este enlace por correo."}
+            </AlertBanner>
+          )}
           <FormSuccess
             title="Tu reporte fue recibido"
             message="Estamos intentando conectarte con un voluntario o donante cercano. Si estás en peligro inmediato, intenta contactar servicios oficiales o personas cercanas."
@@ -162,6 +204,13 @@ export default function ReportarAyudaPage() {
               type="tel"
               placeholder="+58 414 1234567"
               hint="Opcional pero recomendado. No se mostrará públicamente."
+            />
+            <FormInput
+              label="Correo electrónico"
+              name="email"
+              type="email"
+              placeholder="tucorreo@ejemplo.com"
+              hint="Opcional. Te enviamos un enlace para seguir tu caso."
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormInput
