@@ -189,6 +189,8 @@ export interface Report {
   assignment_status: AssignmentStatus;
   distance_km: number | null;
   match_score: number | null;
+  email: string | null;
+  tracking_token: string | null;
 }
 
 export interface SafeReport {

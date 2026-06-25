@@ -53,6 +53,8 @@ export default function ReportarAyudaPage() {
     const people = Number(data.get("people_count") || 1);
     if (!Number.isFinite(people) || people < 1)
       e.people_count = "Debe ser al menos 1.";
+    if (coords.latitude == null || coords.longitude == null)
+      e.location = "Debes compartir tu ubicación para continuar.";
     return e;
   }
 
@@ -272,11 +274,11 @@ export default function ReportarAyudaPage() {
 
           <Card className="space-y-3">
             <p className="text-sm font-semibold text-gray-800">
-              📍 Tu ubicación (recomendada)
+              📍 Tu ubicación <span className="text-red-600">*</span>
             </p>
             <p className="text-xs text-gray-600">
-              Compartir tu ubicación exacta ayuda a que un voluntario o donante
-              cercano te encuentre más rápido. Toca el botón y acepta el permiso.
+              Necesitamos tu ubicación exacta para conectarte con un voluntario
+              o donante cercano. Toca el botón y acepta el permiso.
             </p>
             <LocationButton onLocated={setCoords} />
             {coords.latitude != null && coords.longitude != null ? (
@@ -284,11 +286,11 @@ export default function ReportarAyudaPage() {
                 ✓ Ubicación compartida ({coords.latitude.toFixed(5)},{" "}
                 {coords.longitude.toFixed(5)})
               </p>
+            ) : errors.location ? (
+              <AlertBanner tone="emergency">{errors.location}</AlertBanner>
             ) : (
               <AlertBanner tone="warning">
-                Aún no compartiste tu ubicación. Si puedes, toca{" "}
-                <strong>“Usar mi ubicación”</strong> para que te localicen más
-                rápido.
+                Toca <strong>“Usar mi ubicación”</strong> para continuar.
               </AlertBanner>
             )}
           </Card>
