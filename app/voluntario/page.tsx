@@ -10,6 +10,7 @@ import Button from "@/components/ui/Button";
 import AlertBanner from "@/components/ui/AlertBanner";
 import FormSuccess from "@/components/forms/FormSuccess";
 import { insertRow } from "@/lib/submit";
+import { getSession } from "@/lib/auth";
 import { SKILL_OPTIONS } from "@/lib/types";
 
 const AVAILABILITY = [
@@ -49,6 +50,8 @@ export default function VoluntarioPage() {
     if (Object.keys(e).length > 0) return;
 
     setSubmitting(true);
+    const session = await getSession();
+    const uid = session?.user.id;
     const payload = {
       full_name: String(data.get("full_name")).trim(),
       phone: String(data.get("phone") || "").trim() || null,
@@ -57,6 +60,8 @@ export default function VoluntarioPage() {
       skills: skills.join(", "),
       has_vehicle: hasVehicle,
       availability: String(data.get("availability") || "").trim() || null,
+      // Solo si hay sesión (requiere la migración 0003); evita romper si no se corrió.
+      ...(uid ? { user_id: uid } : {}),
     };
     const res = await insertRow("volunteers", payload);
     setSubmitting(false);

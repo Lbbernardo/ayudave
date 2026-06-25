@@ -29,6 +29,59 @@ import {
 // Estados de asignación que cuentan como "caso activo" (ocupan un cupo).
 const ACTIVE_STATUSES = ["asignado", "aceptado", "en_camino"] as const;
 
+// ---------------------------------------------------------------------
+// Timeline (case_updates) y notificaciones in-app (notifications)
+// ---------------------------------------------------------------------
+
+/** Agrega un evento al timeline del caso. No falla el flujo si hay error. */
+export async function addTimelineEvent(
+  reportId: string,
+  note: string,
+  status: string | null,
+  actor: string
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  try {
+    await supabase
+      .from("case_updates")
+      .insert({ report_id: reportId, note, status, actor });
+  } catch (e) {
+    console.error("addTimelineEvent:", e);
+  }
+}
+
+/** Crea una notificación in-app para la cuenta de un ayudante (si tiene). */
+async function notifyHelperInApp(
+  userId: string | null,
+  type: string,
+  title: string,
+  body: string,
+  reportId: string
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase || !userId) return; // sin cuenta vinculada => no hay a quién notificar
+  try {
+    await supabase
+      .from("notifications")
+      .insert({ user_id: userId, type, title, body, report_id: reportId });
+  } catch (e) {
+    console.error("notifyHelperInApp:", e);
+  }
+}
+
+/** Busca el user_id (cuenta) vinculado a un voluntario/donante. */
+async function getHelperUserId(
+  type: MatchCandidate["type"],
+  id: string
+): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+  const table = type === "volunteer" ? "volunteers" : "donations";
+  const { data } = await supabase.from(table).select("user_id").eq("id", id).single();
+  return (data as { user_id: string | null } | null)?.user_id ?? null;
+}
+
 // Tipos de ayuda que solo puede atender un voluntario (no un donante).
 const VOLUNTEER_ONLY_HELP = new Set(["Médica", "Atrapado", "Transporte"]);
 
@@ -357,11 +410,29 @@ export async function autoAssignReport(reportId: string): Promise<AutoAssignResu
     })
     .eq("id", reportId);
 
-  // Notificar (placeholder).
+  // Notificar (placeholder externo: console.log para futuro WhatsApp/SMS).
   const contact = { name: best.name, phone: best.phone };
   const reportForNotify = { ...summary, distanceKm: best.distanceKm };
   if (best.type === "volunteer") notifyVolunteerAssignment(contact, reportForNotify);
   else notifyDonorAssignment(contact, reportForNotify);
+
+  // Timeline + notificación in-app (portal).
+  const zona = `${r.city ?? "—"}, ${r.state ?? "—"}`;
+  const tipoPersona = best.type === "volunteer" ? "voluntario" : "donante";
+  await addTimelineEvent(
+    reportId,
+    `Caso asignado automáticamente a ${best.name ?? "un " + tipoPersona} (${tipoPersona}).`,
+    "asignado",
+    "sistema"
+  );
+  const userId = await getHelperUserId(best.type, best.id);
+  await notifyHelperInApp(
+    userId,
+    "assignment",
+    "Nuevo caso asignado",
+    `Te asignamos un caso de ${r.help_type} en ${zona} (urgencia ${r.urgency}).`,
+    reportId
+  );
 
   return { assigned: true, demo: false, candidate: best };
 }
@@ -408,6 +479,12 @@ export async function markReportAttended(reportId: string): Promise<void> {
 // Acciones del voluntario / donante (vista /mi-ayuda)
 // ---------------------------------------------------------------------
 
+const TIMELINE_NOTE: Record<string, string> = {
+  aceptado: "El ayudante aceptó el caso.",
+  en_camino: "El ayudante va en camino.",
+  completado: "El ayudante marcó el caso como completado.",
+};
+
 async function setAssignmentAndReport(
   assignmentId: string,
   reportId: string,
@@ -424,6 +501,12 @@ async function setAssignmentAndReport(
     .from("reports")
     .update({ assignment_status: assignmentStatus, status: reportStatus })
     .eq("id", reportId);
+  await addTimelineEvent(
+    reportId,
+    TIMELINE_NOTE[assignmentStatus] ?? `Estado: ${assignmentStatus}`,
+    assignmentStatus,
+    "ayudante"
+  );
 }
 
 /** El voluntario/donante acepta el caso. */
@@ -455,6 +538,12 @@ export async function rejectAssignment(
     .from("assignments")
     .update({ status: "rechazado", updated_at: new Date().toISOString() })
     .eq("id", assignmentId);
+  await addTimelineEvent(
+    reportId,
+    "El ayudante no pudo tomar el caso; intentando reasignar.",
+    "rechazado",
+    "ayudante"
+  );
   // autoAssignReport excluye a quien ya tuvo el caso (incluido este rechazo).
   return autoAssignReport(reportId);
 }

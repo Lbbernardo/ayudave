@@ -11,6 +11,7 @@ import Button from "@/components/ui/Button";
 import AlertBanner from "@/components/ui/AlertBanner";
 import FormSuccess from "@/components/forms/FormSuccess";
 import { insertRow } from "@/lib/submit";
+import { getSession } from "@/lib/auth";
 import { DONATION_TYPES } from "@/lib/types";
 
 export default function DonarPage() {
@@ -32,6 +33,8 @@ export default function DonarPage() {
     if (Object.keys(e).length > 0) return;
 
     setSubmitting(true);
+    const session = await getSession();
+    const uid = session?.user.id;
     const payload = {
       donor_name: String(data.get("donor_name") || "").trim() || null,
       phone: String(data.get("phone") || "").trim() || null,
@@ -39,6 +42,8 @@ export default function DonarPage() {
       description: String(data.get("description") || "").trim() || null,
       state: String(data.get("state") || "").trim() || null,
       city: String(data.get("city") || "").trim() || null,
+      // Solo si hay sesión (requiere la migración 0003); evita romper si no se corrió.
+      ...(uid ? { user_id: uid } : {}),
     };
     const res = await insertRow("donations", payload);
     setSubmitting(false);

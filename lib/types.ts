@@ -172,6 +172,7 @@ export interface Volunteer {
   latitude: number | null;
   longitude: number | null;
   max_active_cases: number | null;
+  user_id: string | null;
 }
 
 export interface Donation {
@@ -187,6 +188,7 @@ export interface Donation {
   latitude: number | null;
   longitude: number | null;
   max_active_cases: number | null;
+  user_id: string | null;
 }
 
 export interface Assignment {
@@ -205,5 +207,28 @@ export interface CaseUpdate {
   report_id: string;
   note: string;
   status: string | null;
+  actor: string | null;
+  created_at: string;
+}
+
+export type UserRole = "helper" | "admin";
+
+export interface Profile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  role: UserRole;
+  created_at: string;
+}
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  report_id: string | null;
+  read: boolean;
   created_at: string;
 }

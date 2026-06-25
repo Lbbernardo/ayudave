@@ -7,7 +7,7 @@ const navLinks = [
   { href: "/buscar-familiar", label: "Buscar familiar" },
   { href: "/voluntario", label: "Voluntario" },
   { href: "/donar", label: "Donar" },
-  { href: "/mi-ayuda", label: "Mis casos" },
+  { href: "/panel", label: "Mi portal" },
   { href: "/mapa", label: "Mapa" },
 ];
 
