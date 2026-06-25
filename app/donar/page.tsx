@@ -75,6 +75,7 @@ export default function DonarPage() {
           )}
           <FormSuccess
             title="¡Gracias por tu ofrecimiento!"
+            message="Gracias por ofrecer ayuda. El sistema podrá conectar tu donación con una persona cercana que la necesite."
             onReset={reset}
             resetLabel="Ofrecer otra donación"
           />

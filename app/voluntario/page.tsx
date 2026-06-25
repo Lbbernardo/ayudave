@@ -95,6 +95,7 @@ export default function VoluntarioPage() {
           )}
           <FormSuccess
             title="¡Gracias por sumarte como voluntario!"
+            message="Gracias por registrarte. Cuando haya un caso cercano que coincida con tu disponibilidad, podrá ser asignado a ti."
             onReset={reset}
             resetLabel="Registrar a otro voluntario"
           />

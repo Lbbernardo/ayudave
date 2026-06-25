@@ -5,6 +5,7 @@ import AlertBanner from "@/components/ui/AlertBanner";
 const adminNav = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/reportes", label: "Reportes", icon: "🆘" },
+  { href: "/admin/asignaciones", label: "Asignaciones", icon: "🔗" },
   { href: "/admin/personas", label: "Personas", icon: "👥" },
   { href: "/admin/voluntarios", label: "Voluntarios", icon: "🤝" },
 ];

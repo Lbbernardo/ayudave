@@ -1,11 +1,12 @@
 "use client";
 
 // TODO: Proteger esta ruta con Supabase Auth (solo coordinadores).
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
 import Select from "@/components/ui/Select";
+import Button from "@/components/ui/Button";
 import StatusBadge from "@/components/ui/StatusBadge";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/ui/EmptyState";
@@ -14,39 +15,57 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   REPORT_STATUSES,
   URGENCY_OPTIONS,
+  type Donation,
   type Report,
   type ReportStatus,
+  type Volunteer,
 } from "@/lib/types";
+import {
+  markReportAttended,
+  reassignReport,
+  unassignReport,
+} from "@/lib/matching";
 import { formatDate } from "@/lib/utils";
+
+type QuickFilter = "todos" | "sin_asignar" | "asignados" | "urgencia_alta";
+
+const QUICK_FILTERS: { key: QuickFilter; label: string }[] = [
+  { key: "todos", label: "Todos" },
+  { key: "sin_asignar", label: "Sin asignar" },
+  { key: "asignados", label: "Asignados" },
+  { key: "urgencia_alta", label: "Urgencia alta" },
+];
 
 export default function AdminReportesPage() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [people, setPeople] = useState<Record<string, string>>({});
+  // Sin Supabase no hay nada que cargar: arrancamos sin spinner.
+  const [loading, setLoading] = useState(isSupabaseConfigured);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [filters, setFilters] = useState({ urgency: "", city: "", status: "" });
+  const [quick, setQuick] = useState<QuickFilter>("todos");
+
+  const load = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const supabase = getSupabaseClient();
+    const [reportsRes, volsRes, donsRes] = await Promise.all([
+      supabase!.from("reports").select("*").order("created_at", { ascending: false }),
+      supabase!.from("volunteers").select("id, full_name"),
+      supabase!.from("donations").select("id, donor_name"),
+    ]);
+    const names: Record<string, string> = {};
+    for (const v of (volsRes.data as Pick<Volunteer, "id" | "full_name">[]) || [])
+      names[v.id] = v.full_name;
+    for (const d of (donsRes.data as Pick<Donation, "id" | "donor_name">[]) || [])
+      names[d.id] = d.donor_name || "Donante";
+    setPeople(names);
+    setReports((reportsRes.data as Report[]) || []);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    async function load() {
-      if (!isSupabaseConfigured) {
-        if (active) setLoading(false);
-        return;
-      }
-      const supabase = getSupabaseClient();
-      const { data } = await supabase!
-        .from("reports")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (active) {
-        setReports((data as Report[]) || []);
-        setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      active = false;
-    };
-  }, []);
+    void Promise.resolve().then(load);
+  }, [load]);
 
   const cities = useMemo(
     () => Array.from(new Set(reports.map((r) => r.city).filter(Boolean) as string[])).sort(),
@@ -57,13 +76,14 @@ export default function AdminReportesPage() {
     if (filters.urgency && r.urgency !== filters.urgency) return false;
     if (filters.city && r.city !== filters.city) return false;
     if (filters.status && r.status !== filters.status) return false;
+    if (quick === "sin_asignar" && r.assigned_to_id) return false;
+    if (quick === "asignados" && !r.assigned_to_id) return false;
+    if (quick === "urgencia_alta" && r.urgency !== "alta") return false;
     return true;
   });
 
   async function changeStatus(id: string, status: ReportStatus) {
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
+    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
     if (!isSupabaseConfigured) return;
     setSavingId(id);
     const supabase = getSupabaseClient();
@@ -71,13 +91,35 @@ export default function AdminReportesPage() {
     setSavingId(null);
   }
 
+  async function runAction(id: string, action: () => Promise<unknown>) {
+    if (!isSupabaseConfigured) return;
+    setSavingId(id);
+    await action();
+    await load();
+    setSavingId(null);
+  }
+
   return (
     <AdminLayout>
       <PageHeader
         title="Reportes de ayuda"
-        subtitle="Gestiona y prioriza los casos. Aquí sí se muestra el teléfono completo."
+        subtitle="Gestiona, asigna y prioriza los casos. Aquí sí se muestra el teléfono completo."
         icon="🆘"
       />
+
+      {/* Filtros rápidos */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {QUICK_FILTERS.map((q) => (
+          <Button
+            key={q.key}
+            size="sm"
+            variant={quick === q.key ? "primary" : "outline"}
+            onClick={() => setQuick(q.key)}
+          >
+            {q.label}
+          </Button>
+        ))}
+      </div>
 
       <Card className="mb-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -128,53 +170,110 @@ export default function AdminReportesPage() {
                   <th className="px-3 py-2">Fecha</th>
                   <th className="px-3 py-2">Nombre</th>
                   <th className="px-3 py-2">Teléfono</th>
-                  <th className="px-3 py-2">Estado</th>
                   <th className="px-3 py-2">Ciudad</th>
                   <th className="px-3 py-2">Tipo</th>
                   <th className="px-3 py-2">Urgencia</th>
+                  <th className="px-3 py-2">Asignado a</th>
+                  <th className="px-3 py-2">Distancia</th>
+                  <th className="px-3 py-2">Asignación</th>
                   <th className="px-3 py-2">Status</th>
                   <th className="px-3 py-2">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((r) => (
-                  <tr key={r.id} className="align-middle hover:bg-surface/50">
-                    <td className="whitespace-nowrap px-3 py-2 text-gray-500">
-                      {formatDate(r.created_at)}
-                    </td>
-                    <td className="px-3 py-2 font-medium text-gray-900">
-                      {r.full_name}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-gray-700">
-                      {r.phone || "—"}
-                    </td>
-                    <td className="px-3 py-2 text-gray-700">{r.state || "—"}</td>
-                    <td className="px-3 py-2 text-gray-700">{r.city || "—"}</td>
-                    <td className="px-3 py-2 text-gray-700">{r.help_type}</td>
-                    <td className="px-3 py-2">
-                      <StatusBadge value={r.urgency} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <StatusBadge value={r.status} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <select
-                        value={r.status}
-                        disabled={savingId === r.id}
-                        onChange={(e) =>
-                          changeStatus(r.id, e.target.value as ReportStatus)
-                        }
-                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-trust"
-                      >
-                        {REPORT_STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((r) => {
+                  const busy = savingId === r.id;
+                  return (
+                    <tr key={r.id} className="align-middle hover:bg-surface/50">
+                      <td className="whitespace-nowrap px-3 py-2 text-gray-500">
+                        {formatDate(r.created_at)}
+                      </td>
+                      <td className="px-3 py-2 font-medium text-gray-900">
+                        {r.full_name}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-gray-700">
+                        {r.phone || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">{r.city || "—"}</td>
+                      <td className="px-3 py-2 text-gray-700">{r.help_type}</td>
+                      <td className="px-3 py-2">
+                        <StatusBadge value={r.urgency} />
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        {r.assigned_to_id ? (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-900">
+                              {people[r.assigned_to_id] || "Persona"}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {r.assigned_to_type === "donor"
+                                ? "Donante"
+                                : "Voluntario"}
+                            </span>
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-gray-700">
+                        {r.distance_km != null ? `${r.distance_km} km` : "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <StatusBadge value={r.assignment_status || "sin_asignar"} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={r.status}
+                          disabled={busy}
+                          onChange={(e) =>
+                            changeStatus(r.id, e.target.value as ReportStatus)
+                          }
+                          className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-trust"
+                        >
+                          {REPORT_STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => runAction(r.id, () => reassignReport(r.id))}
+                          >
+                            Reasignar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="safe"
+                            disabled={busy || r.status === "atendido"}
+                            onClick={() =>
+                              runAction(r.id, () => markReportAttended(r.id))
+                            }
+                          >
+                            Atendido
+                          </Button>
+                          {r.assigned_to_id && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={busy}
+                              onClick={() =>
+                                runAction(r.id, () => unassignReport(r.id))
+                              }
+                            >
+                              Quitar
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

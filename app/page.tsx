@@ -40,6 +40,13 @@ const actions = [
     accent: "border-warning-dark/30 hover:border-warning-dark bg-warning/10",
   },
   {
+    href: "/mi-ayuda",
+    title: "Mis casos",
+    description: "¿Eres voluntario o donante? Ingresa tu teléfono y revisa los casos asignados.",
+    icon: "📋",
+    accent: "border-trust/30 hover:border-trust bg-trust/5",
+  },
+  {
     href: "/mapa",
     title: "Ver mapa de ayuda",
     description: "Explora los reportes y necesidades por zona.",

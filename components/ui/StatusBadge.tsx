@@ -15,9 +15,17 @@ const styleMap: Record<string, string> = {
   pendiente: "bg-gray-100 text-gray-700 border-gray-300",
   revisado: "bg-trust/10 text-trust border-trust/30",
   asignado: "bg-blue-100 text-blue-800 border-blue-300",
+  en_proceso: "bg-indigo-100 text-indigo-800 border-indigo-300",
   atendido: "bg-safe/10 text-green-800 border-safe/30",
   falso: "bg-red-100 text-red-700 border-red-300",
   duplicado: "bg-gray-100 text-gray-500 border-gray-300",
+  // estados de asignación
+  sin_asignar: "bg-gray-100 text-gray-600 border-gray-300",
+  pendiente_sin_asignar: "bg-amber-100 text-amber-800 border-amber-300",
+  aceptado: "bg-trust/10 text-trust border-trust/30",
+  en_camino: "bg-indigo-100 text-indigo-800 border-indigo-300",
+  completado: "bg-safe/10 text-green-800 border-safe/30",
+  rechazado: "bg-red-100 text-red-700 border-red-300",
   // voluntarios
   disponible: "bg-safe/10 text-green-800 border-safe/30",
   inactivo: "bg-gray-100 text-gray-500 border-gray-300",

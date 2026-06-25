@@ -12,7 +12,8 @@ import EmergencyNotice from "@/components/ui/EmergencyNotice";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LocationButton from "@/components/forms/LocationButton";
 import FormSuccess from "@/components/forms/FormSuccess";
-import { insertRow } from "@/lib/submit";
+import { insertRowReturning } from "@/lib/submit";
+import { autoAssignReport } from "@/lib/matching";
 import { HELP_TYPES, URGENCY_OPTIONS } from "@/lib/types";
 
 interface Coords {
@@ -29,6 +30,7 @@ export default function ReportarAyudaPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [demo, setDemo] = useState(false);
+  const [assigned, setAssigned] = useState<boolean | null>(null);
   const [serverError, setServerError] = useState("");
   const [formKey, setFormKey] = useState(0);
 
@@ -71,18 +73,34 @@ export default function ReportarAyudaPage() {
       longitude: coords.longitude,
     };
 
-    const res = await insertRow("reports", payload);
-    setSubmitting(false);
-    if (res.ok) {
-      setDemo(res.demo);
-      setSuccess(true);
-    } else {
+    const res = await insertRowReturning("reports", payload);
+    if (!res.ok) {
+      setSubmitting(false);
       setServerError(res.error || "No se pudo enviar el reporte.");
+      return;
     }
+
+    // El reporte se guardó: intentamos asignarlo automáticamente.
+    // Si falla la asignación, el reporte igual quedó guardado.
+    let wasAssigned: boolean | null = null;
+    if (res.id) {
+      try {
+        const assignment = await autoAssignReport(res.id);
+        wasAssigned = assignment.assigned;
+      } catch (err) {
+        console.error("Error en la asignación automática:", err);
+      }
+    }
+
+    setSubmitting(false);
+    setDemo(res.demo);
+    setAssigned(wasAssigned);
+    setSuccess(true);
   }
 
   function reset() {
     setSuccess(false);
+    setAssigned(null);
     setErrors({});
     setCoords({ latitude: null, longitude: null });
     setServerError("");
@@ -105,7 +123,22 @@ export default function ReportarAyudaPage() {
               una base de datos real.
             </AlertBanner>
           )}
-          <FormSuccess onReset={reset} />
+          {assigned === true && (
+            <AlertBanner tone="safe">
+              Tu caso fue asignado a una persona cercana que podría ayudarte.
+            </AlertBanner>
+          )}
+          {assigned === false && (
+            <AlertBanner tone="warning">
+              Tu caso fue recibido, pero todavía no encontramos una persona
+              cercana disponible. Un coordinador podrá revisarlo.
+            </AlertBanner>
+          )}
+          <FormSuccess
+            title="Tu reporte fue recibido"
+            message="Estamos intentando conectarte con un voluntario o donante cercano. Si estás en peligro inmediato, intenta contactar servicios oficiales o personas cercanas."
+            onReset={reset}
+          />
         </div>
       ) : (
         <form key={formKey} onSubmit={handleSubmit} className="space-y-4">
