@@ -27,6 +27,7 @@ interface CaseRow {
   assignment: Assignment;
   report: Report;
   timeline: CaseUpdate[];
+  helperName: string;
 }
 
 export default function PanelPage() {
@@ -67,13 +68,15 @@ export default function PanelPage() {
     setLoadingCases(true);
     // 1. Registros de ayudante (voluntario/donante) de esta cuenta.
     const [vols, dons] = await Promise.all([
-      sb.from("volunteers").select("id").eq("user_id", uid),
-      sb.from("donations").select("id").eq("user_id", uid),
+      sb.from("volunteers").select("id, full_name").eq("user_id", uid),
+      sb.from("donations").select("id, donor_name").eq("user_id", uid),
     ]);
-    const ids = [
-      ...((vols.data as { id: string }[]) || []).map((v) => v.id),
-      ...((dons.data as { id: string }[]) || []).map((d) => d.id),
-    ];
+    const volRows = (vols.data as { id: string; full_name: string | null }[]) || [];
+    const donRows = (dons.data as { id: string; donor_name: string | null }[]) || [];
+    const ids = [...volRows.map((v) => v.id), ...donRows.map((d) => d.id)];
+    const nameById = new Map<string, string>();
+    for (const v of volRows) nameById.set(v.id, v.full_name || "Tu voluntario");
+    for (const d of donRows) nameById.set(d.id, d.donor_name || "Tu colaborador");
     setHasProfile(ids.length > 0);
     if (ids.length === 0) {
       setCases([]);
@@ -119,6 +122,7 @@ export default function PanelPage() {
           assignment: a,
           report,
           timeline: updatesByReport.get(a.report_id) || [],
+          helperName: nameById.get(a.assigned_to_id) || "Tu voluntario",
         });
     }
     setCases(rows);
@@ -267,9 +271,23 @@ function CaseCard({
   onComplete: () => void;
   onReject: () => void;
 }) {
-  const { assignment, report, timeline } = row;
+  const { assignment, report, timeline, helperName } = row;
   const status = assignment.status;
   const [showTimeline, setShowTimeline] = useState(false);
+
+  // Mensaje de presentación pre-escrito para WhatsApp.
+  const tipo = assignment.assigned_to_type === "donor" ? "colaborador" : "voluntario";
+  const accion =
+    status === "en_camino"
+      ? "Voy en camino 🚗."
+      : "Me asignaron tu caso y voy a ayudarte.";
+  const presentacion = `Hola 👋, soy ${helperName}. Soy tu ${tipo} de AyudaVE para tu solicitud de ${report.help_type}${
+    report.city ? ` en ${report.city}` : ""
+  }. ${accion} ¿Te puedo ubicar?`;
+  const waUrl = `https://wa.me/${(report.phone || "").replace(
+    /\D/g,
+    ""
+  )}?text=${encodeURIComponent(presentacion)}`;
 
   return (
     <Card className="space-y-3">
@@ -325,22 +343,25 @@ function CaseCard({
             </p>
           )}
           {report.phone ? (
-            <div className="flex flex-wrap gap-2">
-              <a href={`tel:${report.phone}`}>
-                <Button size="sm" variant="primary">
-                  📞 Llamar
-                </Button>
-              </a>
-              <a
-                href={`https://wa.me/${report.phone.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button size="sm" variant="safe">
-                  💬 WhatsApp
-                </Button>
-              </a>
-            </div>
+            <>
+              <div className="flex flex-wrap gap-2">
+                <a href={`tel:${report.phone}`}>
+                  <Button size="sm" variant="primary">
+                    📞 Llamar
+                  </Button>
+                </a>
+                <a href={waUrl} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm" variant="safe">
+                    💬 Presentarme por WhatsApp
+                  </Button>
+                </a>
+              </div>
+              <p className="text-xs text-gray-500">
+                💡 El mensaje de presentación ya va escrito. En WhatsApp puedes{" "}
+                <strong>adjuntar una foto tuya</strong> para que la persona te
+                reconozca.
+              </p>
+            </>
           ) : (
             <p className="text-sm text-gray-500">
               La persona no dejó teléfono.{" "}
