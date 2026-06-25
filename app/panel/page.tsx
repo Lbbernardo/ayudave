@@ -299,6 +299,64 @@ function CaseCard({
         )}
       </div>
 
+      {/* Contacto de la persona: solo visible una vez que aceptas el caso. */}
+      {status === "asignado" ? (
+        <AlertBanner tone="info">
+          📞 <strong>Acepta el caso</strong> para ver el teléfono y la ubicación
+          de la persona y poder contactarla.
+        </AlertBanner>
+      ) : (
+        <div className="space-y-2 rounded-lg border border-trust/30 bg-trust/5 p-3">
+          <p className="text-sm font-bold text-gray-900">📞 Contacto de la persona</p>
+          {report.full_name && (
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold">Nombre:</span> {report.full_name}
+            </p>
+          )}
+          {report.address && (
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold">Dirección / referencia:</span>{" "}
+              {report.address}
+            </p>
+          )}
+          {report.phone ? (
+            <div className="flex flex-wrap gap-2">
+              <a href={`tel:${report.phone}`}>
+                <Button size="sm" variant="primary">
+                  📞 Llamar
+                </Button>
+              </a>
+              <a
+                href={`https://wa.me/${report.phone.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button size="sm" variant="safe">
+                  💬 WhatsApp
+                </Button>
+              </a>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">
+              La persona no dejó teléfono.{" "}
+              {report.address
+                ? "Usa la dirección/referencia o coordina con el coordinador."
+                : "Coordina con el coordinador."}
+            </p>
+          )}
+          {report.latitude != null && report.longitude != null && (
+            <a
+              href={`https://www.google.com/maps?q=${report.latitude},${report.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-sm font-semibold text-trust underline"
+            >
+              📍 Ver ubicación en el mapa
+            </a>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {status === "asignado" && (
           <Button variant="primary" size="lg" disabled={busy} onClick={onAccept}>
