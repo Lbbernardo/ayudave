@@ -11,6 +11,7 @@ import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/ui/EmptyState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import NotificationBell from "@/components/portal/NotificationBell";
+import HelperOnboarding from "@/components/portal/HelperOnboarding";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ensureProfile, getSession, signOut } from "@/lib/auth";
 import {
@@ -33,6 +34,7 @@ export default function PanelPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [loadingCases, setLoadingCases] = useState(false);
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
@@ -72,6 +74,7 @@ export default function PanelPage() {
       ...((vols.data as { id: string }[]) || []).map((v) => v.id),
       ...((dons.data as { id: string }[]) || []).map((d) => d.id),
     ];
+    setHasProfile(ids.length > 0);
     if (ids.length === 0) {
       setCases([]);
       setLoadingCases(false);
@@ -198,12 +201,18 @@ export default function PanelPage() {
         </AlertBanner>
       )}
 
-      {loadingCases ? (
+      {loadingCases || hasProfile === null ? (
         <LoadingState />
+      ) : hasProfile === false ? (
+        <HelperOnboarding
+          userId={userId}
+          email={email}
+          onDone={() => void loadCases(userId)}
+        />
       ) : cases.length === 0 ? (
         <EmptyState
-          title="No tienes casos asignados"
-          description="Cuando haya un caso cercano que coincida contigo, aparecerá aquí y te llegará una notificación. ¿Aún no te registraste como voluntario o donante con este correo? Hazlo desde el menú."
+          title="¡Perfil listo! Aún no tienes casos"
+          description="Cuando haya un caso cercano que coincida con lo que ofreces, aparecerá aquí y te llegará una notificación 🔔."
           icon="📭"
         />
       ) : (

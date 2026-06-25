@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
+import Link from "next/link";
 import PublicLayout from "@/components/layout/PublicLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
@@ -21,6 +22,11 @@ export default function DonarPage() {
   const [demo, setDemo] = useState(false);
   const [serverError, setServerError] = useState("");
   const [formKey, setFormKey] = useState(0);
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getSession().then((s) => setSessionEmail(s?.user.email ?? null));
+  }, []);
 
   async function handleSubmit(ev: FormEvent<HTMLFormElement>) {
     ev.preventDefault();
@@ -87,6 +93,29 @@ export default function DonarPage() {
         </div>
       ) : (
         <form key={formKey} onSubmit={handleSubmit} className="space-y-4">
+          {sessionEmail ? (
+            <AlertBanner tone="safe">
+              ✅ Conectado como <strong>{sessionEmail}</strong>. Este registro se
+              vinculará a tu cuenta y podrás gestionar tus casos en{" "}
+              <Link href="/panel" className="font-semibold underline">
+                tu portal
+              </Link>
+              .
+            </AlertBanner>
+          ) : (
+            <AlertBanner tone="info">
+              ¿Vas a gestionar tus casos desde el portal?{" "}
+              <Link href="/login" className="font-semibold underline">
+                Inicia sesión
+              </Link>{" "}
+              antes de registrarte para que quede vinculado a tu cuenta. También
+              puedes registrarte desde{" "}
+              <Link href="/panel" className="font-semibold underline">
+                tu portal
+              </Link>
+              .
+            </AlertBanner>
+          )}
           <AlertBanner tone="info">
             Tu teléfono <strong>no se mostrará públicamente</strong>. Solo lo verán
             los coordinadores para organizar la entrega.

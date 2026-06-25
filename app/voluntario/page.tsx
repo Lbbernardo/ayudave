@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
+import Link from "next/link";
 import PublicLayout from "@/components/layout/PublicLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
@@ -31,6 +32,11 @@ export default function VoluntarioPage() {
   const [demo, setDemo] = useState(false);
   const [serverError, setServerError] = useState("");
   const [formKey, setFormKey] = useState(0);
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getSession().then((s) => setSessionEmail(s?.user.email ?? null));
+  }, []);
 
   function toggleSkill(skill: string) {
     setSkills((prev) =>
@@ -107,6 +113,29 @@ export default function VoluntarioPage() {
         </div>
       ) : (
         <form key={formKey} onSubmit={handleSubmit} className="space-y-4">
+          {sessionEmail ? (
+            <AlertBanner tone="safe">
+              ✅ Conectado como <strong>{sessionEmail}</strong>. Este registro se
+              vinculará a tu cuenta y podrás gestionar tus casos en{" "}
+              <Link href="/panel" className="font-semibold underline">
+                tu portal
+              </Link>
+              .
+            </AlertBanner>
+          ) : (
+            <AlertBanner tone="info">
+              ¿Vas a gestionar tus casos desde el portal?{" "}
+              <Link href="/login" className="font-semibold underline">
+                Inicia sesión
+              </Link>{" "}
+              antes de registrarte para que quede vinculado a tu cuenta. También
+              puedes registrarte directamente desde{" "}
+              <Link href="/panel" className="font-semibold underline">
+                tu portal
+              </Link>
+              .
+            </AlertBanner>
+          )}
           <Card className="space-y-4">
             <FormInput
               label="Nombre completo"
