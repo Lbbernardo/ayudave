@@ -1,0 +1,201 @@
+"use client";
+
+import { useState, FormEvent } from "react";
+import PublicLayout from "@/components/layout/PublicLayout";
+import PageHeader from "@/components/ui/PageHeader";
+import Card from "@/components/ui/Card";
+import FormInput from "@/components/ui/FormInput";
+import Select from "@/components/ui/Select";
+import Textarea from "@/components/ui/Textarea";
+import Button from "@/components/ui/Button";
+import EmergencyNotice from "@/components/ui/EmergencyNotice";
+import AlertBanner from "@/components/ui/AlertBanner";
+import LocationButton from "@/components/forms/LocationButton";
+import FormSuccess from "@/components/forms/FormSuccess";
+import { insertRow } from "@/lib/submit";
+import { HELP_TYPES, URGENCY_OPTIONS } from "@/lib/types";
+
+interface Coords {
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export default function ReportarAyudaPage() {
+  const [coords, setCoords] = useState<Coords>({
+    latitude: null,
+    longitude: null,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [demo, setDemo] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const [formKey, setFormKey] = useState(0);
+
+  function validate(data: FormData): Record<string, string> {
+    const e: Record<string, string> = {};
+    if (!String(data.get("full_name") || "").trim())
+      e.full_name = "El nombre es obligatorio.";
+    if (!String(data.get("help_type") || ""))
+      e.help_type = "Selecciona el tipo de ayuda.";
+    const urgency = String(data.get("urgency") || "");
+    if (!URGENCY_OPTIONS.includes(urgency as never))
+      e.urgency = "Selecciona una urgencia válida.";
+    const people = Number(data.get("people_count") || 1);
+    if (!Number.isFinite(people) || people < 1)
+      e.people_count = "Debe ser al menos 1.";
+    return e;
+  }
+
+  async function handleSubmit(ev: FormEvent<HTMLFormElement>) {
+    ev.preventDefault();
+    setServerError("");
+    const form = ev.currentTarget;
+    const data = new FormData(form);
+    const v = validate(data);
+    setErrors(v);
+    if (Object.keys(v).length > 0) return;
+
+    setSubmitting(true);
+    const payload = {
+      full_name: String(data.get("full_name")).trim(),
+      phone: String(data.get("phone") || "").trim() || null,
+      state: String(data.get("state") || "").trim() || null,
+      city: String(data.get("city") || "").trim() || null,
+      address: String(data.get("address") || "").trim() || null,
+      help_type: String(data.get("help_type")),
+      urgency: String(data.get("urgency")),
+      description: String(data.get("description") || "").trim() || null,
+      people_count: Number(data.get("people_count") || 1),
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+    };
+
+    const res = await insertRow("reports", payload);
+    setSubmitting(false);
+    if (res.ok) {
+      setDemo(res.demo);
+      setSuccess(true);
+    } else {
+      setServerError(res.error || "No se pudo enviar el reporte.");
+    }
+  }
+
+  function reset() {
+    setSuccess(false);
+    setErrors({});
+    setCoords({ latitude: null, longitude: null });
+    setServerError("");
+    setFormKey((k) => k + 1);
+  }
+
+  return (
+    <PublicLayout>
+      <PageHeader
+        title="Necesito ayuda"
+        subtitle="Cuéntanos qué necesitas. Tu reporte llegará a los coordinadores."
+        icon="🆘"
+      />
+
+      {success ? (
+        <div className="space-y-4">
+          {demo && (
+            <AlertBanner tone="info">
+              Modo demo: Supabase no está configurado, el reporte no se guardó en
+              una base de datos real.
+            </AlertBanner>
+          )}
+          <FormSuccess onReset={reset} />
+        </div>
+      ) : (
+        <form key={formKey} onSubmit={handleSubmit} className="space-y-4">
+          <EmergencyNotice compact />
+
+          <Card className="space-y-4">
+            <FormInput
+              label="Nombre completo"
+              name="full_name"
+              required
+              placeholder="Ej. María Pérez"
+              error={errors.full_name}
+            />
+            <FormInput
+              label="Teléfono"
+              name="phone"
+              type="tel"
+              placeholder="+58 414 1234567"
+              hint="Opcional pero recomendado. No se mostrará públicamente."
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormInput label="Estado" name="state" placeholder="Ej. Distrito Capital" />
+              <FormInput label="Ciudad" name="city" placeholder="Ej. Caracas" />
+            </div>
+            <FormInput
+              label="Dirección o referencia"
+              name="address"
+              placeholder="Calle, sector, punto de referencia"
+            />
+          </Card>
+
+          <Card className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Select
+                label="Tipo de ayuda"
+                name="help_type"
+                options={HELP_TYPES}
+                placeholder="Selecciona…"
+                required
+                error={errors.help_type}
+              />
+              <Select
+                label="Urgencia"
+                name="urgency"
+                options={URGENCY_OPTIONS}
+                defaultValue="media"
+                required
+                error={errors.urgency}
+              />
+            </div>
+            <FormInput
+              label="Número de personas"
+              name="people_count"
+              type="number"
+              min={1}
+              defaultValue={1}
+              required
+              error={errors.people_count}
+            />
+            <Textarea
+              label="Descripción"
+              name="description"
+              placeholder="Describe la situación con el mayor detalle posible."
+            />
+          </Card>
+
+          <Card className="space-y-3">
+            <p className="text-sm font-semibold text-gray-800">Ubicación (opcional)</p>
+            <LocationButton onLocated={setCoords} />
+            {coords.latitude != null && coords.longitude != null && (
+              <p className="text-xs text-gray-500">
+                Coordenadas: {coords.latitude.toFixed(5)},{" "}
+                {coords.longitude.toFixed(5)}
+              </p>
+            )}
+          </Card>
+
+          {serverError && <AlertBanner tone="emergency">{serverError}</AlertBanner>}
+
+          <Button
+            type="submit"
+            variant="emergency"
+            size="lg"
+            fullWidth
+            disabled={submitting}
+          >
+            {submitting ? "Enviando…" : "Enviar reporte"}
+          </Button>
+        </form>
+      )}
+    </PublicLayout>
+  );
+}

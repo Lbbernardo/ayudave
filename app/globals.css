@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta AyudaVE */
+  --color-emergency: #dc2626; /* Rojo emergencia */
+  --color-emergency-dark: #b91c1c;
+  --color-trust: #1e3a8a; /* Azul oscuro confianza */
+  --color-trust-light: #2563eb;
+  --color-safe: #16a34a; /* Verde "estoy bien" */
+  --color-safe-light: #22c55e;
+  --color-warning: #facc15; /* Amarillo advertencias */
+  --color-warning-dark: #ca8a04;
+  --color-surface: #f3f4f6; /* Gris claro de fondos */
+  --color-card: #ffffff; /* Blanco para tarjetas */
+
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+:root {
+  --background: #f3f4f6;
+  --foreground: #111827;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Estilos para popups de Mapbox */
+.mapboxgl-popup-content {
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+}
