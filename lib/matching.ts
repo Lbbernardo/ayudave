@@ -225,7 +225,10 @@ function volunteerCompatible(helpType: string, v: Volunteer): boolean {
 }
 
 function donorCompatible(helpType: string, d: Donation): boolean {
-  return sameText(helpType, d.donation_type);
+  // donation_type puede traer varios tipos separados por coma (ej: "Agua, Medicinas").
+  return (d.donation_type || "")
+    .split(",")
+    .some((t) => sameText(helpType, t));
 }
 
 // ---------------------------------------------------------------------

@@ -12,6 +12,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import NotificationBell from "@/components/portal/NotificationBell";
 import HelperOnboarding from "@/components/portal/HelperOnboarding";
+import HelperProfile from "@/components/portal/HelperProfile";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ensureProfile, getSession, signOut } from "@/lib/auth";
 import {
@@ -39,6 +40,7 @@ export default function PanelPage() {
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [view, setView] = useState<"cases" | "profile">("cases");
 
   // Detectar sesión (incluye el aterrizaje del magic link).
   useEffect(() => {
@@ -207,7 +209,7 @@ export default function PanelPage() {
         </AlertBanner>
       )}
 
-      {loadingCases || hasProfile === null ? (
+      {hasProfile === null ? (
         <LoadingState />
       ) : hasProfile === false ? (
         <HelperOnboarding
@@ -215,42 +217,68 @@ export default function PanelPage() {
           email={email}
           onDone={() => void loadCases(userId)}
         />
-      ) : cases.length === 0 ? (
-        <EmptyState
-          title="¡Perfil listo! Aún no tienes casos"
-          description="Cuando haya un caso cercano que coincida con lo que ofreces, aparecerá aquí y te llegará una notificación 🔔."
-          icon="📭"
-        />
       ) : (
-        <div className="space-y-4">
-          {cases.map((row) => (
-            <CaseCard
-              key={row.assignment.id}
-              row={row}
-              busy={busyId === row.assignment.id}
-              onAccept={() =>
-                act(row, () => acceptAssignment(row.assignment.id, row.report.id))
-              }
-              onStart={() =>
-                act(row, () => startAssignment(row.assignment.id, row.report.id))
-              }
-              onComplete={() =>
-                act(
-                  row,
-                  () => completeAssignment(row.assignment.id, row.report.id),
-                  "¡Gracias! Marcaste el caso como completado."
-                )
-              }
-              onReject={() =>
-                act(
-                  row,
-                  () => rejectAssignment(row.assignment.id, row.report.id),
-                  "Entendido. Intentamos asignar el caso a otra persona cercana."
-                )
-              }
+        <>
+          {/* Pestañas: casos / perfil */}
+          <div className="mb-4 flex gap-2">
+            <Button
+              size="sm"
+              variant={view === "cases" ? "primary" : "outline"}
+              onClick={() => setView("cases")}
+            >
+              📋 Mis casos
+            </Button>
+            <Button
+              size="sm"
+              variant={view === "profile" ? "primary" : "outline"}
+              onClick={() => setView("profile")}
+            >
+              👤 Mi perfil
+            </Button>
+          </div>
+
+          {view === "profile" ? (
+            <HelperProfile userId={userId} />
+          ) : loadingCases ? (
+            <LoadingState />
+          ) : cases.length === 0 ? (
+            <EmptyState
+              title="¡Perfil listo! Aún no tienes casos"
+              description="Cuando haya un caso cercano que coincida con lo que ofreces, aparecerá aquí y te llegará una notificación 🔔."
+              icon="📭"
             />
-          ))}
-        </div>
+          ) : (
+            <div className="space-y-4">
+              {cases.map((row) => (
+                <CaseCard
+                  key={row.assignment.id}
+                  row={row}
+                  busy={busyId === row.assignment.id}
+                  onAccept={() =>
+                    act(row, () => acceptAssignment(row.assignment.id, row.report.id))
+                  }
+                  onStart={() =>
+                    act(row, () => startAssignment(row.assignment.id, row.report.id))
+                  }
+                  onComplete={() =>
+                    act(
+                      row,
+                      () => completeAssignment(row.assignment.id, row.report.id),
+                      "¡Gracias! Marcaste el caso como completado."
+                    )
+                  }
+                  onReject={() =>
+                    act(
+                      row,
+                      () => rejectAssignment(row.assignment.id, row.report.id),
+                      "Entendido. Intentamos asignar el caso a otra persona cercana."
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </PublicLayout>
   );
