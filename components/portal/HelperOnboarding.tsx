@@ -7,6 +7,7 @@ import FormInput from "@/components/ui/FormInput";
 import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import AlertBanner from "@/components/ui/AlertBanner";
+import LocationButton from "@/components/forms/LocationButton";
 import { insertRow } from "@/lib/submit";
 import { SKILL_OPTIONS, DONATION_TYPES } from "@/lib/types";
 
@@ -38,6 +39,10 @@ export default function HelperOnboarding({
   const [mode, setMode] = useState<Mode>(null);
   const [skills, setSkills] = useState<string[]>([]);
   const [hasVehicle, setHasVehicle] = useState(false);
+  const [coords, setCoords] = useState<{
+    latitude: number | null;
+    longitude: number | null;
+  }>({ latitude: null, longitude: null });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -64,6 +69,8 @@ export default function HelperOnboarding({
       skills: skills.join(", "),
       has_vehicle: hasVehicle,
       availability: String(data.get("availability") || "").trim() || null,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
       user_id: userId,
     });
     setSubmitting(false);
@@ -87,12 +94,36 @@ export default function HelperOnboarding({
       description: String(data.get("description") || "").trim() || null,
       state: String(data.get("state") || "").trim() || null,
       city: String(data.get("city") || "").trim() || null,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
       user_id: userId,
     });
     setSubmitting(false);
     if (res.ok) onDone();
     else setError(res.error || "No se pudo guardar.");
   }
+
+  const locationCard = (
+    <Card className="space-y-2">
+      <p className="text-sm font-semibold text-gray-800">
+        📍 Tu ubicación (recomendada)
+      </p>
+      <p className="text-xs text-gray-600">
+        Nos ayuda a calcular qué tan cerca estás de cada caso y mostrarte la
+        distancia en kilómetros.
+      </p>
+      <LocationButton onLocated={setCoords} />
+      {coords.latitude != null ? (
+        <p className="text-xs font-semibold text-green-700">
+          ✓ Ubicación capturada
+        </p>
+      ) : (
+        <p className="text-xs text-gray-500">
+          Sin ubicación te asignaremos por ciudad/estado (sin distancia exacta).
+        </p>
+      )}
+    </Card>
+  );
 
   // Paso 0: elegir si es voluntario o donante.
   if (mode === null) {
@@ -189,6 +220,7 @@ export default function HelperOnboarding({
             </label>
             <Select label="Disponibilidad" name="availability" options={AVAILABILITY} placeholder="Selecciona…" />
           </Card>
+          {locationCard}
           {error && <AlertBanner tone="emergency">{error}</AlertBanner>}
           <Button type="submit" variant="primary" size="lg" fullWidth disabled={submitting}>
             {submitting ? "Guardando…" : "Guardar mi perfil de voluntario"}
@@ -206,6 +238,7 @@ export default function HelperOnboarding({
               <FormInput label="Ciudad" name="city" placeholder="Ej. Valencia" />
             </div>
           </Card>
+          {locationCard}
           {error && <AlertBanner tone="emergency">{error}</AlertBanner>}
           <Button type="submit" variant="warning" size="lg" fullWidth disabled={submitting}>
             {submitting ? "Guardando…" : "Guardar mi perfil de donante"}

@@ -286,10 +286,15 @@ function CaseCard({
         <p>
           <span className="font-semibold">Urgencia:</span> {report.urgency}
         </p>
-        {assignment.distance_km != null && (
+        {assignment.distance_km != null ? (
           <p>
-            <span className="font-semibold">Distancia aprox.:</span>{" "}
-            {assignment.distance_km} km
+            <span className="font-semibold">📏 Distancia:</span> a ~
+            {assignment.distance_km} km de ti
+          </p>
+        ) : (
+          <p className="text-gray-500">
+            <span className="font-semibold">📏 Distancia:</span> en tu misma zona
+            (sin GPS exacto)
           </p>
         )}
         {report.description && (
