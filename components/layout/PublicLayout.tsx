@@ -64,7 +64,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             <Link href="/mapa" className="hover:text-trust">
               Mapa de ayuda
             </Link>
-            <Link href="/admin" className="hover:text-trust">
+            <Link href="/admin" prefetch={false} className="hover:text-trust">
               Panel de coordinación
             </Link>
           </div>

@@ -37,12 +37,16 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  return new NextResponse("Autenticación requerida.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="AyudaVE Admin", charset="UTF-8"',
-    },
-  });
+  // Solo enviamos el reto Basic (que abre el diálogo del navegador) en una
+  // NAVEGACIÓN real del usuario hacia /admin. En precargas de Next.js o
+  // subpeticiones (fetch, prefetch) devolvemos 401 SIN el reto, para que el
+  // diálogo no aparezca en páginas públicas que solo enlazan a /admin.
+  const isNavigation = request.headers.get("sec-fetch-mode") === "navigate";
+  const headers: Record<string, string> = {};
+  if (isNavigation) {
+    headers["WWW-Authenticate"] = 'Basic realm="AyudaVE Admin", charset="UTF-8"';
+  }
+  return new NextResponse("Autenticación requerida.", { status: 401, headers });
 }
 
 export const config = {
