@@ -413,6 +413,12 @@ export async function autoAssignReport(reportId: string): Promise<AutoAssignResu
   }
   const r = report as Report;
 
+  // No asignar si el caso ya fue aceptado, está en camino o completado.
+  const LOCKED = ["aceptado", "en_camino", "completado"];
+  if (LOCKED.includes(r.assignment_status)) {
+    return { assigned: false, demo: false, reason: "El caso ya está siendo atendido." };
+  }
+
   // No reasignar a personas que ya tuvieron este caso (incluye rechazos).
   const { data: prior } = await supabase
     .from("assignments")
