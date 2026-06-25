@@ -40,6 +40,10 @@ export default function ReportarAyudaPage() {
       e.full_name = "El nombre es obligatorio.";
     if (!String(data.get("help_type") || ""))
       e.help_type = "Selecciona el tipo de ayuda.";
+    if (!String(data.get("state") || "").trim())
+      e.state = "Indica el estado.";
+    if (!String(data.get("city") || "").trim())
+      e.city = "Indica la ciudad.";
     const urgency = String(data.get("urgency") || "");
     if (!URGENCY_OPTIONS.includes(urgency as never))
       e.urgency = "Selecciona una urgencia válida.";
@@ -160,13 +164,25 @@ export default function ReportarAyudaPage() {
               hint="Opcional pero recomendado. No se mostrará públicamente."
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormInput label="Estado" name="state" placeholder="Ej. Distrito Capital" />
-              <FormInput label="Ciudad" name="city" placeholder="Ej. Caracas" />
+              <FormInput
+                label="Estado"
+                name="state"
+                placeholder="Ej. Distrito Capital"
+                required
+                error={errors.state}
+              />
+              <FormInput
+                label="Ciudad"
+                name="city"
+                placeholder="Ej. Caracas"
+                required
+                error={errors.city}
+              />
             </div>
             <FormInput
               label="Dirección o referencia"
               name="address"
-              placeholder="Calle, sector, punto de referencia"
+              placeholder="Calle, sector, punto de referencia (ayuda a ubicarte)"
             />
           </Card>
 
@@ -206,13 +222,25 @@ export default function ReportarAyudaPage() {
           </Card>
 
           <Card className="space-y-3">
-            <p className="text-sm font-semibold text-gray-800">Ubicación (opcional)</p>
+            <p className="text-sm font-semibold text-gray-800">
+              📍 Tu ubicación (recomendada)
+            </p>
+            <p className="text-xs text-gray-600">
+              Compartir tu ubicación exacta ayuda a que un voluntario o donante
+              cercano te encuentre más rápido. Toca el botón y acepta el permiso.
+            </p>
             <LocationButton onLocated={setCoords} />
-            {coords.latitude != null && coords.longitude != null && (
-              <p className="text-xs text-gray-500">
-                Coordenadas: {coords.latitude.toFixed(5)},{" "}
-                {coords.longitude.toFixed(5)}
+            {coords.latitude != null && coords.longitude != null ? (
+              <p className="text-xs font-semibold text-green-700">
+                ✓ Ubicación compartida ({coords.latitude.toFixed(5)},{" "}
+                {coords.longitude.toFixed(5)})
               </p>
+            ) : (
+              <AlertBanner tone="warning">
+                Aún no compartiste tu ubicación. Si puedes, toca{" "}
+                <strong>“Usar mi ubicación”</strong> para que te localicen más
+                rápido.
+              </AlertBanner>
             )}
           </Card>
 
