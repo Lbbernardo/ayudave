@@ -23,20 +23,27 @@ const AVAILABILITY = [
 type Mode = "volunteer" | "donor" | null;
 
 /**
- * Onboarding dentro del portal: el usuario logueado completa su perfil de
- * voluntario o donante. Como siempre se hace con sesión activa, el registro
- * queda vinculado a su cuenta (user_id) sin posibilidad de quedar anónimo.
+ * Onboarding de voluntario o donante. Funciona en dos contextos:
+ *  - Dentro del portal con sesión activa (userId presente): queda vinculado a
+ *    la cuenta.
+ *  - Público, sin login (userId null): registro anónimo, sin depender del
+ *    correo de Supabase (evita el "email rate limit").
+ *
+ * `forceMode` fija el tipo (voluntario/donante) y oculta el selector inicial,
+ * útil para las páginas dedicadas /voluntario y /donar.
  */
 export default function HelperOnboarding({
   userId,
   email,
   onDone,
+  forceMode,
 }: {
-  userId: string;
-  email: string | null;
+  userId: string | null;
+  email?: string | null;
   onDone: () => void;
+  forceMode?: Exclude<Mode, null>;
 }) {
-  const [mode, setMode] = useState<Mode>(null);
+  const [mode, setMode] = useState<Mode>(forceMode ?? null);
   const [caps, setCaps] = useState<string[]>([]);
   const [hasVehicle, setHasVehicle] = useState(false);
   const [coords, setCoords] = useState<{
@@ -71,7 +78,7 @@ export default function HelperOnboarding({
       availability: String(data.get("availability") || "").trim() || null,
       latitude: coords.latitude,
       longitude: coords.longitude,
-      user_id: userId,
+      ...(userId ? { user_id: userId } : {}),
     });
     setSubmitting(false);
     if (res.ok) onDone();
@@ -96,7 +103,7 @@ export default function HelperOnboarding({
       city: String(data.get("city") || "").trim() || null,
       latitude: coords.latitude,
       longitude: coords.longitude,
-      user_id: userId,
+      ...(userId ? { user_id: userId } : {}),
     });
     setSubmitting(false);
     if (res.ok) onDone();
@@ -164,16 +171,18 @@ export default function HelperOnboarding({
   // Paso 1: formulario según el tipo elegido.
   return (
     <div className="space-y-4">
-      <button
-        type="button"
-        onClick={() => {
-          setMode(null);
-          setError("");
-        }}
-        className="text-sm font-semibold text-trust"
-      >
-        ← Cambiar
-      </button>
+      {!forceMode && (
+        <button
+          type="button"
+          onClick={() => {
+            setMode(null);
+            setError("");
+          }}
+          className="text-sm font-semibold text-trust"
+        >
+          ← Cambiar
+        </button>
+      )}
 
       {mode === "volunteer" ? (
         <form onSubmit={submitVolunteer} className="space-y-4">

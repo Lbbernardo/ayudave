@@ -9,7 +9,7 @@ const TABS = [
   { href: "/", label: "Inicio", icon: "🏠" },
   { href: "/mapa", label: "Mapa", icon: "🗺️" },
   { href: "/reportar-ayuda", label: "Ayuda", icon: "🆘", center: true },
-  { href: "/panel", label: "Ayudar", icon: "🤝" },
+  { href: "/voluntario", label: "Ayudar", icon: "🤝" },
 ];
 
 // Destinos secundarios que se abren en la hoja "Más".

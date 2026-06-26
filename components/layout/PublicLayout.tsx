@@ -7,7 +7,7 @@ const navLinks = [
   { href: "/reportar-ayuda", label: "Necesito ayuda" },
   { href: "/estoy-bien", label: "Estoy bien" },
   { href: "/buscar-familiar", label: "Buscar familiar" },
-  { href: "/panel", label: "Quiero ayudar" },
+  { href: "/voluntario", label: "Quiero ayudar" },
   { href: "/mapa", label: "Mapa" },
   { href: "/refugio", label: "Refugio" },
   { href: "/acopio-exterior", label: "Acopio exterior" },
