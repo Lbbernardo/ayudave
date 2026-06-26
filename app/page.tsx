@@ -84,6 +84,98 @@ const HOW = [
   { icon: "✅", title: "Caso completado", desc: "El mapa muestra un ❤️ por cada persona que recibió ayuda." },
 ];
 
+const FEATURES = [
+  {
+    icon: "🆘",
+    color: "border-red-200 bg-red-50",
+    titleColor: "text-red-700",
+    title: "Pedir ayuda",
+    points: [
+      "Rellena un formulario corto: tipo de ayuda, descripción y tu ubicación GPS.",
+      "El sistema busca automáticamente al voluntario o donante más cercano y compatible.",
+      "Recibes un enlace privado para seguir el avance de tu caso en tiempo real.",
+      "Si dejaste tu correo, también te llega el enlace por email.",
+      "Tu teléfono nunca se muestra al público — solo al coordinador.",
+    ],
+  },
+  {
+    icon: "🤝",
+    color: "border-amber-200 bg-amber-50",
+    titleColor: "text-amber-700",
+    title: "Ser voluntario o donar",
+    points: [
+      "Regístrate como voluntario o donante en menos de 2 minutos.",
+      "El sistema calcula una puntuación de compatibilidad (0–100) y te asigna el caso más cercano.",
+      "También puedes ver el mapa, tocar en un caso y ofrecerte directamente a ayudar.",
+      "Desde /mi-ayuda encuentras tus casos asignados sin necesidad de crear una cuenta.",
+      "Puedes manejar varios casos al mismo tiempo.",
+    ],
+  },
+  {
+    icon: "🔎",
+    color: "border-purple-200 bg-purple-50",
+    titleColor: "text-purple-700",
+    title: "Buscar familiar",
+    points: [
+      "Registra el nombre, descripción y foto de la persona que buscas.",
+      "Aparece en el mapa con un marcador 🔍 para que cualquiera que la vea pueda reportarlo.",
+      "Indica la última ubicación conocida para acotar la búsqueda.",
+      "Tu teléfono de contacto no se muestra públicamente; solo lo ve el coordinador.",
+      "Cuando la encuentres, el coordinador puede marcar el caso como resuelto.",
+    ],
+  },
+  {
+    icon: "✅",
+    color: "border-green-200 bg-green-50",
+    titleColor: "text-green-700",
+    title: "Avisar que estás bien",
+    points: [
+      "Con un solo formulario avisas a tu familia que estás a salvo.",
+      "Tu nombre y mensaje aparecen en el mapa con un ✅ verde.",
+      "Puedes compartir tu ubicación exacta o solo ciudad y estado.",
+      "No necesitas crear una cuenta ni iniciar sesión.",
+    ],
+  },
+  {
+    icon: "🗺️",
+    color: "border-blue-200 bg-blue-50",
+    titleColor: "text-blue-700",
+    title: "El mapa en tiempo real",
+    points: [
+      "Muestra todos los reportes activos de ayuda filtrados por urgencia, tipo y zona.",
+      "🔍 Personas buscadas con foto — cualquiera puede ver si la reconoce.",
+      "✅ Personas que avisaron que están bien.",
+      "❤️ Casos completados — señal de que la ayuda llegó.",
+      "🏠 Refugios y 📦 centros de acopio registrados en Venezuela.",
+      "Tab de Lista: busca por nombre, zona u organización sin usar el mapa.",
+    ],
+  },
+  {
+    icon: "🏠",
+    color: "border-violet-200 bg-violet-50",
+    titleColor: "text-violet-700",
+    title: "Refugios y centros de acopio",
+    points: [
+      "Registra tu refugio o centro de acopio con nombre, dirección y capacidad.",
+      "Aparece en el mapa con un marcador 🏠 o 📦 según el tipo.",
+      "Quien lo toque en el mapa verá el horario, capacidad y datos de contacto.",
+      "Cualquiera puede registrar un nuevo punto desde el menú 🏠 Refugio / Acopio.",
+    ],
+  },
+  {
+    icon: "🌎",
+    color: "border-sky-200 bg-sky-50",
+    titleColor: "text-sky-700",
+    title: "Acopio fuera de Venezuela",
+    points: [
+      "Lista separada de centros de acopio en el exterior, agrupados por país.",
+      "Busca por nombre, ciudad u organización para encontrar el centro más cercano.",
+      "Cada centro muestra horario, qué aceptan, teléfono, correo y página web.",
+      "¿Tienes un centro fuera de Venezuela? Regístralo gratis desde el menú.",
+    ],
+  },
+];
+
 export default function HomePage() {
   return (
     <PublicLayout>
@@ -142,7 +234,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Cómo funciona ────────────────────────────────────────────────── */}
+      {/* ── Cómo funciona — pasos ────────────────────────────────────────── */}
       <section className="mb-10">
         <h2 className="mb-4 text-xl font-bold text-gray-900">Cómo funciona</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -156,6 +248,30 @@ export default function HomePage() {
               </div>
               <p className="mt-2 text-sm font-semibold text-gray-900">{s.title}</p>
               <p className="mt-1 text-xs text-gray-500 leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Funciones detalladas ──────────────────────────────────────────── */}
+      <section className="mb-10">
+        <h2 className="mb-1 text-xl font-bold text-gray-900">Todo lo que puedes hacer</h2>
+        <p className="mb-5 text-sm text-gray-500">Cada función está diseñada para ser simple, rápida y sin necesidad de crear una cuenta.</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {FEATURES.map((f) => (
+            <div key={f.title} className={`rounded-xl border-2 p-5 ${f.color}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">{f.icon}</span>
+                <h3 className={`font-bold text-base ${f.titleColor}`}>{f.title}</h3>
+              </div>
+              <ul className="space-y-1.5">
+                {f.points.map((p, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-gray-700">
+                    <span className="mt-0.5 shrink-0 text-gray-400">•</span>
+                    <span>{p}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>
