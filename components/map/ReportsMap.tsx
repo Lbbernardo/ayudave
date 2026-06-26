@@ -79,6 +79,11 @@ export default function ReportsMap({ token, reports }: ReportsMapProps) {
           <div style="color:#9ca3af;margin-top:6px;font-size:11px">${formatDateShort(
             r.created_at
           )}</div>
+          <a href="/ayudar/${r.id}" style="display:block;margin-top:10px;background:#1d4ed8;color:#fff;
+             text-align:center;padding:8px 12px;border-radius:8px;font-weight:600;
+             font-size:13px;text-decoration:none">
+            🤝 Quiero ayudar
+          </a>
         </div>`;
 
       const popup = new mapboxgl.Popup({ offset: 14 }).setHTML(popupHtml);

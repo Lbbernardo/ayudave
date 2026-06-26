@@ -624,6 +624,72 @@ export async function rejectAssignment(
   return autoAssignReport(reportId);
 }
 
+// ---------------------------------------------------------------------
+// Asignación directa (voluntario se ofrece desde el mapa)
+// ---------------------------------------------------------------------
+
+/**
+ * Asigna directamente un voluntario a un reporte sin pasar por el scoring.
+ * Usado cuando alguien ve el caso en el mapa y decide ayudar.
+ */
+export async function directAssignToReport(
+  reportId: string,
+  volunteerId: string
+): Promise<{ ok: boolean; reason?: string }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return { ok: false, reason: "Sin conexión." };
+
+  const { data: report, error } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("id", reportId)
+    .single();
+  if (error || !report) return { ok: false, reason: "Reporte no encontrado." };
+  const r = report as Report;
+
+  const LOCKED = ["aceptado", "en_camino", "completado"];
+  if (LOCKED.includes(r.assignment_status)) {
+    return { ok: false, reason: "Este caso ya está siendo atendido." };
+  }
+
+  // Cerrar asignación activa anterior si existe.
+  await supabase
+    .from("assignments")
+    .update({ status: "rechazado", updated_at: new Date().toISOString() })
+    .eq("report_id", reportId)
+    .in("status", ACTIVE_STATUSES as unknown as string[]);
+
+  await supabase.from("assignments").insert({
+    report_id: reportId,
+    assigned_to_type: "volunteer",
+    assigned_to_id: volunteerId,
+    distance_km: null,
+    score: null,
+    status: "asignado",
+  });
+
+  await supabase
+    .from("reports")
+    .update({
+      assigned_to_type: "volunteer",
+      assigned_to_id: volunteerId,
+      assigned_at: new Date().toISOString(),
+      assignment_status: "asignado",
+      status: "asignado",
+    })
+    .eq("id", reportId);
+
+  await addTimelineEvent(
+    reportId,
+    "Un voluntario vio el caso en el mapa y se ofreció a ayudar.",
+    "asignado",
+    "voluntario"
+  );
+
+  return { ok: true };
+}
+
+
 /** Quita la asignación de un reporte y lo deja sin asignar. */
 export async function unassignReport(reportId: string): Promise<void> {
   const supabase = getSupabaseClient();
