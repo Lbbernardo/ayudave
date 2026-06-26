@@ -57,6 +57,20 @@ export function urgencyColor(urgency?: string | null): string {
   }
 }
 
+/**
+ * Caja delimitadora (bounding box) aproximada del territorio venezolano,
+ * incluyendo sus islas del Caribe (Los Roques, La Tortuga, etc.).
+ *   - Latitud:  0.5° N  →  12.5° N
+ *   - Longitud: -74.0° O → -59.5° O
+ * Es deliberadamente generosa: el objetivo es bloquear solicitudes
+ * claramente fuera del país (España, EE. UU., Chile…), no trazar la
+ * frontera exacta.
+ */
+export function isInVenezuela(lat?: number | null, lng?: number | null): boolean {
+  if (lat == null || lng == null) return false;
+  return lat >= 0.5 && lat <= 12.5 && lng >= -74.0 && lng <= -59.5;
+}
+
 /** Une clases condicionalmente sin dependencias externas. */
 export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");

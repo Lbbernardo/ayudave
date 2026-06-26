@@ -16,6 +16,7 @@ import { insertRowReturning } from "@/lib/submit";
 import { autoAssignReport } from "@/lib/matching";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { HELP_TYPES, URGENCY_OPTIONS } from "@/lib/types";
+import { isInVenezuela } from "@/lib/utils";
 
 interface Coords {
   latitude: number | null;
@@ -55,6 +56,10 @@ export default function ReportarAyudaPage() {
       e.people_count = "Debe ser al menos 1.";
     if (coords.latitude == null || coords.longitude == null)
       e.location = "Debes compartir tu ubicación para continuar.";
+    else if (!isInVenezuela(coords.latitude, coords.longitude))
+      e.location =
+        "Este portal es solo para coordinar ayuda dentro de Venezuela. " +
+        "Tu ubicación está fuera del país, por lo que no podemos registrar tu solicitud.";
     return e;
   }
 
@@ -282,10 +287,18 @@ export default function ReportarAyudaPage() {
             </p>
             <LocationButton onLocated={setCoords} />
             {coords.latitude != null && coords.longitude != null ? (
-              <p className="text-xs font-semibold text-green-700">
-                ✓ Ubicación compartida ({coords.latitude.toFixed(5)},{" "}
-                {coords.longitude.toFixed(5)})
-              </p>
+              isInVenezuela(coords.latitude, coords.longitude) ? (
+                <p className="text-xs font-semibold text-green-700">
+                  ✓ Ubicación compartida ({coords.latitude.toFixed(5)},{" "}
+                  {coords.longitude.toFixed(5)})
+                </p>
+              ) : (
+                <AlertBanner tone="emergency">
+                  🇻🇪 Este portal es solo para coordinar ayuda{" "}
+                  <strong>dentro de Venezuela</strong>. Tu ubicación está fuera
+                  del país, por lo que no podemos registrar tu solicitud.
+                </AlertBanner>
+              )
             ) : errors.location ? (
               <AlertBanner tone="emergency">{errors.location}</AlertBanner>
             ) : (
