@@ -11,7 +11,7 @@ import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/ui/EmptyState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { HELP_TYPES, URGENCY_OPTIONS, type Report } from "@/lib/types";
+import { HELP_TYPES, URGENCY_OPTIONS, type Report, type MissingPerson, type SafeReport } from "@/lib/types";
 import { formatDateShort } from "@/lib/utils";
 import type { Refugio } from "@/components/map/ReportsMap";
 
@@ -25,6 +25,8 @@ const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 export default function MapaPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [refugios, setRefugios] = useState<Refugio[]>([]);
+  const [missingPeople, setMissingPeople] = useState<MissingPerson[]>([]);
+  const [safeReports, setSafeReports] = useState<SafeReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ urgency: "", help_type: "", state: "", city: "" });
 
@@ -33,15 +35,27 @@ export default function MapaPage() {
     async function load() {
       if (!isSupabaseConfigured) { if (active) setLoading(false); return; }
       const supabase = getSupabaseClient()!;
-      const [rRes, refRes] = await Promise.all([
+      const [rRes, refRes, missingRes, safeRes] = await Promise.all([
         supabase.from("reports").select("*").eq("is_public", true).order("created_at", { ascending: false }),
         supabase.from("refugios").select("*").eq("is_active", true),
+        supabase.from("missing_people").select("*").eq("status", "buscando"),
+        supabase.from("safe_reports").select("*").order("created_at", { ascending: false }).limit(200),
       ]);
       if (active) {
         setReports((rRes.data as Report[]) || []);
         setRefugios(
           ((refRes.data as Refugio[]) || []).filter(
             (r) => r.latitude != null && r.longitude != null
+          )
+        );
+        setMissingPeople(
+          ((missingRes.data as MissingPerson[]) || []).filter(
+            (p) => p.latitude != null && p.longitude != null
+          )
+        );
+        setSafeReports(
+          ((safeRes.data as SafeReport[]) || []).filter(
+            (s) => s.latitude != null && s.longitude != null
           )
         );
         setLoading(false);
@@ -89,7 +103,7 @@ export default function MapaPage() {
             value={filters.city} onChange={(e) => update("city", e.target.value)} />
         </div>
         <p className="mt-3 text-xs text-gray-500">
-          {filtered.length} reporte(s) · {refugios.length} refugio(s)/centro(s)
+          {filtered.length} reporte(s) · {refugios.length} refugio(s)/centro(s) · {missingPeople.length} buscado(s) · {safeReports.length} a salvo
           {withGeo.length !== filtered.length && ` · ${withGeo.length} con ubicación en el mapa`}.
         </p>
       </Card>
@@ -122,7 +136,7 @@ export default function MapaPage() {
         </>
       ) : (
         <div className="space-y-4">
-          <ReportsMap token={MAPBOX_TOKEN} reports={withGeo} refugios={refugios} />
+          <ReportsMap token={MAPBOX_TOKEN} reports={withGeo} refugios={refugios} missingPeople={missingPeople} safeReports={safeReports} />
           <Legend />
         </div>
       )}
@@ -137,6 +151,8 @@ function Legend() {
       <LegendItem icon="🟡" label="Urgencia media" />
       <LegendItem icon="🟢" label="Urgencia baja" />
       <LegendItem icon="❤️" label="Persona ayudada" />
+      <LegendItem icon="🔍" label="Persona buscada" />
+      <LegendItem icon="✅" label="Está bien" />
       <LegendItem icon="🏠" label="Refugio" />
       <LegendItem icon="📦" label="Centro de acopio" />
     </div>

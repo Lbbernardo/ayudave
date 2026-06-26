@@ -214,6 +214,11 @@ export interface MissingPerson {
   contact_phone: string | null;
   status: MissingStatus;
   created_at: string;
+  latitude: number | null;
+  longitude: number | null;
+  city: string | null;
+  state: string | null;
+  photo_url: string | null;
 }
 
 export interface Volunteer {
