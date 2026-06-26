@@ -7,6 +7,7 @@ const navLinks = [
   { href: "/buscar-familiar", label: "Buscar familiar" },
   { href: "/panel", label: "Quiero ayudar" },
   { href: "/mapa", label: "Mapa" },
+  { href: "/refugio", label: "🏠 Refugio / Acopio" },
 ];
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
