@@ -40,7 +40,7 @@ export default function AlertBanner({
     <div
       role="alert"
       className={cn(
-        "flex gap-3 rounded-lg border px-4 py-3 text-sm",
+        "flex gap-3 rounded-2xl border px-4 py-3.5 text-sm",
         t.box,
         className
       )}

@@ -28,11 +28,11 @@ export default function FormSuccess({
           </>
         )}
       </p>
-      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-        <Button type="button" variant="outline" onClick={onReset}>
+      <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
+        <Button type="button" variant="outline" fullWidth className="sm:w-auto" onClick={onReset}>
           {resetLabel}
         </Button>
-        <Link href="/">
+        <Link href="/" className="w-full sm:w-auto">
           <Button type="button" variant="primary" fullWidth>
             Volver al inicio
           </Button>

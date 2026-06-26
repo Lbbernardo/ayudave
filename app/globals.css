@@ -19,17 +19,58 @@
 :root {
   --background: #f3f4f6;
   --foreground: #111827;
+  /* Altura de la barra de navegación inferior (móvil) + safe area iOS */
+  --bottom-nav-h: 4rem;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  /* Sensación de app: sin resaltado azul al tocar, mejor renderizado */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* Botones e inputs cómodos al tacto en móvil */
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Animación suave de entrada para hojas/sheets y tarjetas */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.animate-fade-in {
+  animation: fade-in 0.18s ease-out;
 }
 
 /* Estilos para popups de Mapbox */
 .mapboxgl-popup-content {
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   padding: 0.75rem 1rem;
   font-size: 0.85rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.25);
 }
