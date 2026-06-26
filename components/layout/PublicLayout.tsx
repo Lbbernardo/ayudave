@@ -8,6 +8,7 @@ const navLinks = [
   { href: "/panel", label: "Quiero ayudar" },
   { href: "/mapa", label: "Mapa" },
   { href: "/refugio", label: "🏠 Refugio / Acopio" },
+  { href: "/acopio-exterior", label: "🌎 Acopio exterior" },
 ];
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
