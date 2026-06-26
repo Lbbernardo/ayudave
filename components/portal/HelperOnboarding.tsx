@@ -8,8 +8,55 @@ import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LocationButton from "@/components/forms/LocationButton";
-import { insertRow } from "@/lib/submit";
+import { insertRowReturning } from "@/lib/submit";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { CAPABILITIES, DONATION_TYPES } from "@/lib/types";
+
+/** Clave de acceso de 4 dígitos. */
+function gen4(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+export interface OnboardingResult {
+  code: string;
+  email: string | null;
+  emailed: boolean;
+}
+
+/**
+ * Guarda email + clave en el registro recién creado (mejor esfuerzo: si la
+ * migración 0011 aún no se corrió, no rompe el registro) y envía la clave por
+ * correo si hay email. Devuelve si el correo se envió.
+ */
+async function attachAccessCode(
+  table: "volunteers" | "donations",
+  id: string,
+  email: string | null,
+  code: string,
+  name: string | null,
+  role: "volunteer" | "donor"
+): Promise<boolean> {
+  const sb = getSupabaseClient();
+  if (sb) {
+    try {
+      await sb.from(table).update({ access_code: code, ...(email ? { email } : {}) }).eq("id", id);
+    } catch {
+      /* columnas aún no existen: el código igual se muestra en pantalla */
+    }
+  }
+  if (!email) return false;
+  try {
+    const res = await fetch("/api/send-access-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, name, role }),
+    });
+    const j = await res.json().catch(() => ({}));
+    return Boolean(j?.sent);
+  } catch {
+    return false;
+  }
+}
 
 const AVAILABILITY = [
   "Inmediata",
@@ -40,7 +87,7 @@ export default function HelperOnboarding({
 }: {
   userId: string | null;
   email?: string | null;
-  onDone: () => void;
+  onDone: (result?: OnboardingResult) => void;
   forceMode?: Exclude<Mode, null>;
 }) {
   const [mode, setMode] = useState<Mode>(forceMode ?? null);
@@ -68,8 +115,11 @@ export default function HelperOnboarding({
       return;
     }
     setSubmitting(true);
-    const res = await insertRow("volunteers", {
-      full_name: String(data.get("full_name")).trim(),
+    const fullName = String(data.get("full_name")).trim();
+    const vEmail = String(data.get("email") || "").trim() || null;
+    const code = gen4();
+    const res = await insertRowReturning("volunteers", {
+      full_name: fullName,
       phone: String(data.get("phone") || "").trim() || null,
       state: String(data.get("state") || "").trim() || null,
       city: String(data.get("city") || "").trim() || null,
@@ -80,9 +130,15 @@ export default function HelperOnboarding({
       longitude: coords.longitude,
       ...(userId ? { user_id: userId } : {}),
     });
+    if (!res.ok) {
+      setSubmitting(false);
+      setError(res.error || "No se pudo guardar.");
+      return;
+    }
+    let emailed = false;
+    if (res.id) emailed = await attachAccessCode("volunteers", res.id, vEmail, code, fullName, "volunteer");
     setSubmitting(false);
-    if (res.ok) onDone();
-    else setError(res.error || "No se pudo guardar.");
+    onDone({ code, email: vEmail, emailed });
   }
 
   async function submitDonor(ev: FormEvent<HTMLFormElement>) {
@@ -94,8 +150,11 @@ export default function HelperOnboarding({
       return;
     }
     setSubmitting(true);
-    const res = await insertRow("donations", {
-      donor_name: String(data.get("donor_name") || "").trim() || null,
+    const donorName = String(data.get("donor_name") || "").trim() || null;
+    const dEmail = String(data.get("email") || "").trim() || null;
+    const code = gen4();
+    const res = await insertRowReturning("donations", {
+      donor_name: donorName,
       phone: String(data.get("phone") || "").trim() || null,
       donation_type: String(data.get("donation_type")),
       description: String(data.get("description") || "").trim() || null,
@@ -105,9 +164,15 @@ export default function HelperOnboarding({
       longitude: coords.longitude,
       ...(userId ? { user_id: userId } : {}),
     });
+    if (!res.ok) {
+      setSubmitting(false);
+      setError(res.error || "No se pudo guardar.");
+      return;
+    }
+    let emailed = false;
+    if (res.id) emailed = await attachAccessCode("donations", res.id, dEmail, code, donorName, "donor");
     setSubmitting(false);
-    if (res.ok) onDone();
-    else setError(res.error || "No se pudo guardar.");
+    onDone({ code, email: dEmail, emailed });
   }
 
   const locationCard = (
@@ -189,6 +254,7 @@ export default function HelperOnboarding({
           <Card className="space-y-4">
             <FormInput label="Nombre completo" name="full_name" required placeholder="Ej. María Pérez" />
             <FormInput label="Teléfono" name="phone" type="tel" placeholder="+58 414 1234567" hint="Para coordinar. No se muestra públicamente." />
+            <FormInput label="Correo electrónico" name="email" type="email" placeholder="tucorreo@ejemplo.com" hint="Te enviamos tu clave de acceso de 4 dígitos." />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormInput label="Estado" name="state" placeholder="Ej. Carabobo" />
               <FormInput label="Ciudad" name="city" placeholder="Ej. Valencia" />
@@ -242,6 +308,7 @@ export default function HelperOnboarding({
           <Card className="space-y-4">
             <FormInput label="Tu nombre / organización" name="donor_name" placeholder="Ej. Fundación Esperanza" />
             <FormInput label="Teléfono" name="phone" type="tel" placeholder="+58 414 1234567" hint="Para coordinar la entrega. No se muestra públicamente." />
+            <FormInput label="Correo electrónico" name="email" type="email" placeholder="tucorreo@ejemplo.com" hint="Te enviamos tu clave de acceso de 4 dígitos." />
             <Select label="Tipo de donación" name="donation_type" options={DONATION_TYPES} placeholder="Selecciona…" required />
             <Textarea label="Descripción" name="description" placeholder="Ej. 200 litros de agua, 50 cajas de medicinas…" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

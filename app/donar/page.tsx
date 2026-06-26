@@ -1,18 +1,17 @@
 "use client";
 
-// Registro PÚBLICO de donantes (sin login). Mismo motivo que /voluntario:
-// el correo de Supabase (magic link) tiene un límite bajo que bloqueaba el
-// registro. El portal /panel sigue disponible para seguimiento con cuenta.
+// Registro PÚBLICO de donantes (sin login). La clave de 4 dígitos se muestra
+// en pantalla y, si dejan email, también se envía por correo.
 import { useState } from "react";
 import Link from "next/link";
 import PublicLayout from "@/components/layout/PublicLayout";
 import PageHeader from "@/components/ui/PageHeader";
-import FormSuccess from "@/components/forms/FormSuccess";
 import AlertBanner from "@/components/ui/AlertBanner";
-import HelperOnboarding from "@/components/portal/HelperOnboarding";
+import AccessCodeSuccess from "@/components/forms/AccessCodeSuccess";
+import HelperOnboarding, { type OnboardingResult } from "@/components/portal/HelperOnboarding";
 
 export default function DonarPage() {
-  const [done, setDone] = useState(false);
+  const [result, setResult] = useState<OnboardingResult | null>(null);
 
   return (
     <PublicLayout>
@@ -22,13 +21,8 @@ export default function DonarPage() {
         icon="🎁"
       />
 
-      {done ? (
-        <FormSuccess
-          title="¡Gracias por tu aporte!"
-          message="Tu donación quedó registrada. Un coordinador puede contactarte para coordinar la entrega."
-          onReset={() => setDone(false)}
-          resetLabel="Registrar otra donación"
-        />
+      {result ? (
+        <AccessCodeSuccess result={result} onReset={() => setResult(null)} resetLabel="Registrar otra donación" />
       ) : (
         <div className="space-y-4">
           <AlertBanner tone="info">
@@ -36,7 +30,7 @@ export default function DonarPage() {
             sesión, puedes{" "}
             <Link href="/panel" className="font-semibold underline">entrar al portal</Link>.
           </AlertBanner>
-          <HelperOnboarding userId={null} forceMode="donor" onDone={() => setDone(true)} />
+          <HelperOnboarding userId={null} forceMode="donor" onDone={(r) => setResult(r ?? null)} />
         </div>
       )}
     </PublicLayout>

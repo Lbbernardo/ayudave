@@ -1,20 +1,19 @@
 "use client";
 
-// Registro PÚBLICO de voluntarios (sin login). Antes vivía dentro del portal
-// (/panel) con magic link, pero el correo de Supabase tiene un límite bajo
-// ("email rate limit") que bloqueaba el registro. Ahora se guarda directo,
-// sin depender del correo. El portal /panel sigue disponible para hacer
+// Registro PÚBLICO de voluntarios (sin login). No depende del correo para
+// completarse: la clave de 4 dígitos se muestra en pantalla y, si dejan email,
+// también se envía por correo. El portal /panel sigue disponible para
 // seguimiento con cuenta.
 import { useState } from "react";
 import Link from "next/link";
 import PublicLayout from "@/components/layout/PublicLayout";
 import PageHeader from "@/components/ui/PageHeader";
-import FormSuccess from "@/components/forms/FormSuccess";
 import AlertBanner from "@/components/ui/AlertBanner";
-import HelperOnboarding from "@/components/portal/HelperOnboarding";
+import AccessCodeSuccess from "@/components/forms/AccessCodeSuccess";
+import HelperOnboarding, { type OnboardingResult } from "@/components/portal/HelperOnboarding";
 
 export default function VoluntarioPage() {
-  const [done, setDone] = useState(false);
+  const [result, setResult] = useState<OnboardingResult | null>(null);
 
   return (
     <PublicLayout>
@@ -24,13 +23,8 @@ export default function VoluntarioPage() {
         icon="🤝"
       />
 
-      {done ? (
-        <FormSuccess
-          title="¡Gracias por sumarte!"
-          message="Tu perfil de voluntario quedó registrado. Un coordinador puede contactarte y el sistema te asignará casos cercanos."
-          onReset={() => setDone(false)}
-          resetLabel="Registrar otro voluntario"
-        />
+      {result ? (
+        <AccessCodeSuccess result={result} onReset={() => setResult(null)} resetLabel="Registrar otro voluntario" />
       ) : (
         <div className="space-y-4">
           <AlertBanner tone="info">
@@ -38,7 +32,7 @@ export default function VoluntarioPage() {
             casos con sesión, puedes{" "}
             <Link href="/panel" className="font-semibold underline">entrar al portal</Link>.
           </AlertBanner>
-          <HelperOnboarding userId={null} forceMode="volunteer" onDone={() => setDone(true)} />
+          <HelperOnboarding userId={null} forceMode="volunteer" onDone={(r) => setResult(r ?? null)} />
         </div>
       )}
     </PublicLayout>
