@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 import StatusBadge from "@/components/ui/StatusBadge";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/ui/EmptyState";
@@ -15,6 +16,7 @@ import {
   type Volunteer,
   type VolunteerStatus,
 } from "@/lib/types";
+import { deleteRow } from "@/lib/admin";
 import { formatDate } from "@/lib/utils";
 
 export default function AdminVoluntariosPage() {
@@ -56,6 +58,15 @@ export default function AdminVoluntariosPage() {
     setSavingId(null);
   }
 
+  async function remove(id: string, name: string) {
+    if (!confirm(`¿Borrar al voluntario "${name}"?`)) return;
+    setSavingId(id);
+    const res = await deleteRow("volunteers", id);
+    if (!res.ok) alert("No se pudo borrar: " + res.error);
+    else setVolunteers((prev) => prev.filter((v) => v.id !== id));
+    setSavingId(null);
+  }
+
   return (
     <AdminLayout>
       <PageHeader
@@ -87,6 +98,7 @@ export default function AdminVoluntariosPage() {
                   <th className="px-3 py-2">Vehículo</th>
                   <th className="px-3 py-2">Disponibilidad</th>
                   <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Cambiar</th>
                   <th className="px-3 py-2">Acción</th>
                 </tr>
               </thead>
@@ -128,6 +140,17 @@ export default function AdminVoluntariosPage() {
                           </option>
                         ))}
                       </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-emergency hover:bg-emergency/5"
+                        disabled={savingId === v.id}
+                        onClick={() => remove(v.id, v.full_name)}
+                      >
+                        🗑
+                      </Button>
                     </td>
                   </tr>
                 ))}

@@ -7,12 +7,14 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
 import Select from "@/components/ui/Select";
+import Button from "@/components/ui/Button";
 import StatusBadge from "@/components/ui/StatusBadge";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/ui/EmptyState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { SafeReport, MissingPerson } from "@/lib/types";
+import { deleteRow } from "@/lib/admin";
 import { formatDate } from "@/lib/utils";
 
 type Tab = "safe" | "missing";
@@ -53,6 +55,20 @@ export default function AdminPersonasPage() {
       active = false;
     };
   }, []);
+
+  async function removeSafe(id: string, name: string) {
+    if (!confirm(`¿Borrar el registro de "${name}"?`)) return;
+    const res = await deleteRow("safe_reports", id);
+    if (!res.ok) alert("No se pudo borrar: " + res.error);
+    else setSafe((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  async function removeMissing(id: string, name: string) {
+    if (!confirm(`¿Borrar la búsqueda de "${name}"?`)) return;
+    const res = await deleteRow("missing_people", id);
+    if (!res.ok) alert("No se pudo borrar: " + res.error);
+    else setMissing((prev) => prev.filter((p) => p.id !== id));
+  }
 
   const cities = useMemo(() => {
     const src =
@@ -149,6 +165,12 @@ export default function AdminPersonasPage() {
                 )}
                 <p className="text-xs text-gray-400">{p.phone || "Sin teléfono"}</p>
                 <p className="text-xs text-gray-400">{formatDate(p.created_at)}</p>
+                <div className="pt-1">
+                  <Button size="sm" variant="ghost" className="text-emergency hover:bg-emergency/5"
+                    onClick={() => removeSafe(p.id, p.full_name)}>
+                    🗑 Borrar
+                  </Button>
+                </div>
               </Card>
             ))}
           </div>
@@ -175,6 +197,12 @@ export default function AdminPersonasPage() {
                 Contacto: {p.contact_name} · {p.contact_phone || "Sin teléfono"}
               </p>
               <p className="text-xs text-gray-400">{formatDate(p.created_at)}</p>
+              <div className="pt-1">
+                <Button size="sm" variant="ghost" className="text-emergency hover:bg-emergency/5"
+                  onClick={() => removeMissing(p.id, p.missing_name)}>
+                  🗑 Borrar
+                </Button>
+              </div>
             </Card>
           ))}
         </div>

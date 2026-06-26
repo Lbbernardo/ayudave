@@ -26,6 +26,7 @@ import {
   reassignReport,
   unassignReport,
 } from "@/lib/matching";
+import { deleteReportCascade } from "@/lib/admin";
 import { formatDate } from "@/lib/utils";
 
 type QuickFilter = "todos" | "sin_asignar" | "asignados" | "urgencia_alta";
@@ -96,6 +97,15 @@ export default function AdminReportesPage() {
     if (!isSupabaseConfigured) return;
     setSavingId(id);
     await action();
+    await load();
+    setSavingId(null);
+  }
+
+  async function deleteReport(id: string, name: string) {
+    if (!confirm(`¿Borrar el reporte de "${name}"? Esta acción no se puede deshacer.`)) return;
+    setSavingId(id);
+    const res = await deleteReportCascade(id);
+    if (!res.ok) alert("No se pudo borrar: " + res.error);
     await load();
     setSavingId(null);
   }
@@ -285,6 +295,15 @@ export default function AdminReportesPage() {
                               Quitar
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-emergency hover:bg-emergency/5"
+                            disabled={busy}
+                            onClick={() => deleteReport(r.id, r.full_name)}
+                          >
+                            🗑 Borrar
+                          </Button>
                         </div>
                       </td>
                     </tr>

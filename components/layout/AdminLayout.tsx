@@ -8,6 +8,7 @@ const adminNav = [
   { href: "/admin/asignaciones", label: "Asignaciones", icon: "🔗" },
   { href: "/admin/personas", label: "Personas", icon: "👥" },
   { href: "/admin/voluntarios", label: "Voluntarios", icon: "🤝" },
+  { href: "/admin/lugares", label: "Lugares", icon: "🏠" },
 ];
 
 // TODO: Proteger todas las rutas /admin con Supabase Auth.
