@@ -133,6 +133,119 @@ export const DONATION_TYPES = [
 ] as const;
 export type DonationType = (typeof DONATION_TYPES)[number];
 
+// ===========================================================================
+// Sistema de oportunidades (help_cases / help_needs / help_claims / centros)
+// ===========================================================================
+
+export type CaseType = "individual" | "group" | "center";
+export type NeedStatus = "abierta" | "llena" | "completada" | "cancelada";
+export type ClaimStatus =
+  | "reservado"
+  | "confirmado"
+  | "en_camino"
+  | "completado"
+  | "cancelado"
+  | "no_asistio";
+export type CenterStatus = "pendiente_aprobacion" | "aprobado" | "rechazado";
+
+/**
+ * Catálogo de tipos de necesidad. `cap` = columna booleana en `volunteers`
+ * que indica compatibilidad (null = cualquiera puede ayudar).
+ */
+export const NEED_TYPES = [
+  { value: "agua", label: "Agua", icon: "💧", cap: null },
+  { value: "comida", label: "Comida", icon: "🍲", cap: null },
+  { value: "medicinas", label: "Medicinas", icon: "💊", cap: null },
+  { value: "ropa", label: "Ropa", icon: "👕", cap: null },
+  { value: "refugio", label: "Refugio", icon: "🏠", cap: null },
+  { value: "herramientas", label: "Herramientas", icon: "🔧", cap: "has_tools" },
+  { value: "cocinar", label: "Cocinar", icon: "👨‍🍳", cap: "can_cook" },
+  { value: "enfermeria", label: "Enfermería", icon: "🩺", cap: "is_nurse" },
+  { value: "medico", label: "Médico", icon: "⚕️", cap: "is_doctor" },
+  { value: "curar_heridas", label: "Curar heridas", icon: "🩹", cap: "can_first_aid" },
+  { value: "remover_escombros", label: "Remover escombros", icon: "🧱", cap: "can_remove_debris" },
+  { value: "carga_descarga", label: "Carga y descarga", icon: "📦", cap: "can_load_boxes" },
+  { value: "clasificar_donaciones", label: "Clasificar donaciones", icon: "🗂️", cap: "can_sort_donations" },
+  { value: "repartir_agua", label: "Repartir agua", icon: "🚰", cap: "can_distribute_water" },
+  { value: "repartir_comida", label: "Repartir comida", icon: "🍱", cap: "can_distribute_food" },
+  { value: "transporte", label: "Transporte de personas", icon: "🚗", cap: "can_transport_people" },
+  { value: "camioneta", label: "Camioneta / carga", icon: "🛻", cap: "has_truck" },
+  { value: "electricidad", label: "Electricidad", icon: "⚡", cap: null },
+  { value: "comunicacion_internet", label: "Comunicación / internet", icon: "📡", cap: null },
+  { value: "cuidado_ninos", label: "Cuidado de niños", icon: "🧒", cap: "can_help_children" },
+  { value: "cuidado_adultos", label: "Cuidado de adultos mayores", icon: "🧓", cap: "can_help_elderly" },
+  { value: "limpieza", label: "Limpieza", icon: "🧹", cap: null },
+  { value: "seguridad_orden", label: "Seguridad y orden", icon: "🦺", cap: null },
+  { value: "otro", label: "Otro", icon: "🤝", cap: null },
+] as const;
+
+export type NeedType = (typeof NEED_TYPES)[number]["value"];
+
+/** Devuelve el catálogo de un tipo de necesidad (o "otro"). */
+export function needMeta(value: string) {
+  return NEED_TYPES.find((n) => n.value === value) ?? NEED_TYPES[NEED_TYPES.length - 1];
+}
+
+export interface CollectionCenter {
+  id: string;
+  name: string;
+  manager_name: string | null;
+  phone: string | null;
+  email: string | null;
+  state: string | null;
+  city: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  schedule: string | null;
+  description: string | null;
+  access_code: string | null;
+  status: CenterStatus;
+  created_at: string;
+}
+
+export interface HelpCase {
+  id: string;
+  case_type: CaseType;
+  center_id: string | null;
+  requester_name: string | null;
+  requester_phone: string | null;
+  state: string | null;
+  city: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  description: string | null;
+  urgency: Urgency;
+  status: string;
+  created_at: string;
+}
+
+export interface HelpNeed {
+  id: string;
+  case_id: string;
+  need_type: NeedType;
+  title: string;
+  description: string | null;
+  quantity_needed: number;
+  quantity_claimed: number;
+  quantity_completed: number;
+  unit: string;
+  urgency: Urgency;
+  status: NeedStatus;
+  created_at: string;
+}
+
+export interface HelpClaim {
+  id: string;
+  need_id: string;
+  volunteer_id: string | null;
+  volunteer_name: string | null;
+  volunteer_phone: string | null;
+  status: ClaimStatus;
+  claimed_at: string;
+}
+
 export const REPORT_STATUSES: ReportStatus[] = [
   "pendiente",
   "revisado",

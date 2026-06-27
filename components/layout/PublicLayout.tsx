@@ -5,12 +5,12 @@ import BottomNav from "./BottomNav";
 // Navegación horizontal (solo escritorio). En móvil se usa la barra inferior.
 const navLinks = [
   { href: "/reportar-ayuda", label: "Necesito ayuda" },
-  { href: "/estoy-bien", label: "Estoy bien" },
-  { href: "/buscar-familiar", label: "Buscar familiar" },
-  { href: "/voluntario", label: "Quiero ayudar" },
+  { href: "/oportunidades", label: "Oportunidades" },
+  { href: "/casos/nuevo", label: "Publicar caso" },
+  { href: "/voluntario", label: "Soy voluntario" },
+  { href: "/centros/login", label: "Centro de acopio" },
+  { href: "/mi-ayuda", label: "Mis casos" },
   { href: "/mapa", label: "Mapa" },
-  { href: "/refugio", label: "Refugio" },
-  { href: "/acopio-exterior", label: "Acopio exterior" },
 ];
 
 export default function PublicLayout({ children }: { children: ReactNode }) {

@@ -8,6 +8,8 @@ const adminNav = [
   { href: "/admin/asignaciones", label: "Asignaciones", icon: "🔗" },
   { href: "/admin/personas", label: "Personas", icon: "👥" },
   { href: "/admin/voluntarios", label: "Voluntarios", icon: "🤝" },
+  { href: "/admin/oportunidades", label: "Oportunidades", icon: "✨" },
+  { href: "/admin/centros", label: "Centros", icon: "🏢" },
   { href: "/admin/lugares", label: "Lugares", icon: "🏠" },
 ];
 

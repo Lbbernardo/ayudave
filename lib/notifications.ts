@@ -83,6 +83,42 @@ export function notifyMatchCompleted(reportId: string): void {
 }
 
 // ---------------------------------------------------------------------
+// Eventos de oportunidades (help_needs / help_claims)
+// TODO: integrar WhatsApp / Twilio / GoHighLevel / Email.
+// ---------------------------------------------------------------------
+
+/** Un voluntario tomó un cupo de una necesidad. */
+export function notifyVolunteerClaimCreated(info: {
+  volunteerName?: string | null;
+  needTitle: string;
+  city?: string | null;
+}): void {
+  console.log("[notify] Voluntario tomó un cupo", info);
+}
+
+/** Avisar al centro/solicitante que alguien tomó un cupo de su necesidad. */
+export function notifyCenterClaimCreated(info: {
+  needTitle: string;
+  remaining: number;
+  volunteerName?: string | null;
+}): void {
+  console.log("[notify] Cupo tomado en una necesidad", info);
+}
+
+/** Una necesidad se llenó (ya no faltan cupos). */
+export function notifyNeedFilled(info: { needTitle: string; city?: string | null }): void {
+  console.log("[notify] Necesidad LLENA", info);
+}
+
+/** Un voluntario canceló su cupo (se liberó). */
+export function notifyVolunteerCancelled(info: {
+  needTitle: string;
+  volunteerName?: string | null;
+}): void {
+  console.log("[notify] Cupo liberado por cancelación", info);
+}
+
+// ---------------------------------------------------------------------
 // Alias antiguos (compatibilidad). No usar en código nuevo.
 // ---------------------------------------------------------------------
 export const notifyVolunteerAssignment = (

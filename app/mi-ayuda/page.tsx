@@ -16,7 +16,15 @@ import {
   rejectAssignment,
   startAssignment,
 } from "@/lib/matching";
-import type { Assignment, Donation, Report, Volunteer } from "@/lib/types";
+import {
+  fetchClaimsByPhone,
+  confirmClaim,
+  startClaim,
+  completeClaim,
+  cancelClaim,
+  type Opportunity,
+} from "@/lib/opportunities";
+import { needMeta, type Assignment, type Donation, type Report, type Volunteer, type HelpClaim } from "@/lib/types";
 
 interface CaseRow {
   assignment: Assignment;
@@ -35,6 +43,7 @@ export default function MiAyudaPage() {
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [claims, setClaims] = useState<{ claim: HelpClaim; opportunity: Opportunity | null }[]>([]);
 
   const [wrongCode, setWrongCode] = useState(false);
 
@@ -68,10 +77,10 @@ export default function MiAyudaPage() {
 
     // 1. Encontrar al voluntario/donante por correo + clave de acceso.
     const [volsRes, donsRes] = await Promise.all([
-      supabase!.from("volunteers").select("id, email, access_code"),
-      supabase!.from("donations").select("id, email, access_code"),
+      supabase!.from("volunteers").select("id, email, access_code, phone"),
+      supabase!.from("donations").select("id, email, access_code, phone"),
     ]);
-    type Rec = { id: string; email: string | null; access_code: string | null };
+    type Rec = { id: string; email: string | null; access_code: string | null; phone: string | null };
     const all: Rec[] = [
       ...((volsRes.data as Rec[]) || []),
       ...((donsRes.data as Rec[]) || []),
@@ -79,21 +88,31 @@ export default function MiAyudaPage() {
 
     const emailHits = all.filter((r) => emailMatches(r.email, email));
     const ids = new Set<string>();
+    let myPhone = "";
     for (const r of emailHits)
-      if (String(r.access_code ?? "").trim() === code) ids.add(r.id);
+      if (String(r.access_code ?? "").trim() === code) {
+        ids.add(r.id);
+        if (r.phone) myPhone = r.phone;
+      }
 
     // Correo correcto pero clave equivocada.
     if (ids.size === 0 && emailHits.length > 0) {
       setWrongCode(true);
       setCases([]);
+      setClaims([]);
       return;
     }
     if (ids.size === 0) {
       setCases([]);
+      setClaims([]);
       return;
     }
 
-    // 2. Buscar sus asignaciones (excluyendo las cerradas).
+    // 2. Oportunidades tomadas (sistema nuevo, por teléfono del registro).
+    if (myPhone) setClaims(await fetchClaimsByPhone(myPhone));
+    else setClaims([]);
+
+    // 3. Asignaciones antiguas (sistema de matching automático).
     const { data: assignData } = await supabase!
       .from("assignments")
       .select("*")
@@ -104,23 +123,27 @@ export default function MiAyudaPage() {
       setCases([]);
       return;
     }
-
-    // 3. Traer los reportes asociados.
     const reportIds = Array.from(new Set(assigns.map((a) => a.report_id)));
     const { data: repData } = await supabase!
       .from("reports")
       .select("*")
       .in("id", reportIds);
-    const reportsById = new Map(
-      ((repData as Report[]) || []).map((r) => [r.id, r])
-    );
-
+    const reportsById = new Map(((repData as Report[]) || []).map((r) => [r.id, r]));
     const rows: CaseRow[] = [];
     for (const a of assigns) {
       const report = reportsById.get(a.report_id);
       if (report) rows.push({ assignment: a, report });
     }
     setCases(rows);
+  }
+
+  async function actClaim(claimId: string, action: () => Promise<unknown>, msg?: string) {
+    setBusyId(claimId);
+    setNotice("");
+    await action();
+    await runSearch(lastEmail, lastCode);
+    setBusyId(null);
+    if (msg) setNotice(msg);
   }
 
   async function act(
@@ -189,12 +212,63 @@ export default function MiAyudaPage() {
         </AlertBanner>
       )}
 
-      {searched && !loading && !wrongCode && cases.length === 0 && isSupabaseConfigured && (
+      {searched && !loading && !wrongCode && cases.length === 0 && claims.length === 0 && isSupabaseConfigured && (
         <EmptyState
-          title="No tienes casos asignados todavía"
-          description="Verifica que el correo y la clave sean correctos. Cuando te asignemos un caso cercano, aparecerá aquí."
+          title="No tienes casos ni cupos todavía"
+          description="Verifica que el correo y la clave sean correctos. Toma oportunidades en la sección “Oportunidades” y aparecerán aquí."
           icon="📭"
         />
+      )}
+
+      {/* Oportunidades tomadas (sistema de cupos) */}
+      {claims.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-2 text-lg font-bold text-gray-900">Oportunidades que tomaste</h2>
+          <div className="space-y-3">
+            {claims.map(({ claim, opportunity }) => {
+              const need = opportunity?.need;
+              const meta = need ? needMeta(need.need_type) : null;
+              const who = opportunity?.center?.name || opportunity?.helpCase?.requester_name || "Caso de ayuda";
+              const city = opportunity?.center?.city || opportunity?.helpCase?.city || "—";
+              const closed = ["completado", "cancelado", "no_asistio"].includes(claim.status);
+              const busy = busyId === claim.id;
+              return (
+                <Card key={claim.id} className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{meta?.icon ?? "✨"}</span>
+                      <div>
+                        <p className="font-bold text-gray-900">{need?.title ?? "Oportunidad"}</p>
+                        <p className="text-xs text-gray-500">{who} · {city}</p>
+                      </div>
+                    </div>
+                    <StatusBadge value={claim.status} />
+                  </div>
+                  {!closed && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {claim.status === "reservado" && (
+                        <Button size="sm" variant="primary" disabled={busy}
+                          onClick={() => actClaim(claim.id, () => confirmClaim(claim.id), "Confirmaste tu asistencia.")}>Confirmar</Button>
+                      )}
+                      {(claim.status === "reservado" || claim.status === "confirmado") && (
+                        <Button size="sm" variant="primary" disabled={busy}
+                          onClick={() => actClaim(claim.id, () => startClaim(claim.id))}>Estoy en camino</Button>
+                      )}
+                      <Button size="sm" variant="safe" disabled={busy}
+                        onClick={() => actClaim(claim.id, () => completeClaim(claim.id), "¡Gracias! Marcaste el cupo como completado.")}>Completado</Button>
+                      <Button size="sm" variant="outline" disabled={busy}
+                        onClick={() => actClaim(claim.id, () => cancelClaim(claim.id), "Tu cupo fue liberado para que otra persona pueda ayudar.")}>Cancelar</Button>
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {cases.length > 0 && (
+        <h2 className="mb-2 text-lg font-bold text-gray-900">Casos asignados</h2>
       )}
 
       <div className="space-y-4">

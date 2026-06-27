@@ -7,17 +7,20 @@ import { useState } from "react";
 // Pestañas principales (móvil). El centro "Ayuda" va destacado.
 const TABS = [
   { href: "/", label: "Inicio", icon: "🏠" },
-  { href: "/mapa", label: "Mapa", icon: "🗺️" },
+  { href: "/oportunidades", label: "Ayudar", icon: "✨" },
   { href: "/reportar-ayuda", label: "Ayuda", icon: "🆘", center: true },
-  { href: "/voluntario", label: "Ayudar", icon: "🤝" },
+  { href: "/mi-ayuda", label: "Mis casos", icon: "📋" },
 ];
 
 // Destinos secundarios que se abren en la hoja "Más".
 const MORE = [
+  { href: "/casos/nuevo", label: "Publicar un caso", icon: "📣", desc: "Pide ayuda con varias necesidades" },
+  { href: "/voluntario", label: "Soy voluntario", icon: "🤝", desc: "Regístrate para ayudar" },
+  { href: "/centros/login", label: "Centro de acopio", icon: "🏢", desc: "Ingresar o registrar un centro" },
+  { href: "/mapa", label: "Mapa", icon: "🗺️", desc: "Reportes, refugios y más" },
   { href: "/estoy-bien", label: "Estoy bien", icon: "✅", desc: "Avisa que estás a salvo" },
   { href: "/buscar-familiar", label: "Buscar familiar", icon: "🔎", desc: "Reporta a una persona" },
   { href: "/donar", label: "Quiero donar", icon: "💛", desc: "Registra qué puedes donar" },
-  { href: "/mi-ayuda", label: "Mis casos", icon: "📋", desc: "Voluntario: entra con correo y clave" },
   { href: "/refugio", label: "Refugio / Acopio", icon: "🏠", desc: "Dentro de Venezuela" },
   { href: "/acopio-exterior", label: "Acopio exterior", icon: "🌎", desc: "Centros fuera del país" },
   { href: "/privacidad", label: "Privacidad", icon: "🔒", desc: "Cómo cuidamos tus datos" },
