@@ -17,6 +17,7 @@ const MORE = [
   { href: "/estoy-bien", label: "Estoy bien", icon: "✅", desc: "Avisa que estás a salvo" },
   { href: "/buscar-familiar", label: "Buscar familiar", icon: "🔎", desc: "Reporta a una persona" },
   { href: "/donar", label: "Quiero donar", icon: "💛", desc: "Registra qué puedes donar" },
+  { href: "/mi-ayuda", label: "Mis casos", icon: "📋", desc: "Voluntario: entra con correo y clave" },
   { href: "/refugio", label: "Refugio / Acopio", icon: "🏠", desc: "Dentro de Venezuela" },
   { href: "/acopio-exterior", label: "Acopio exterior", icon: "🌎", desc: "Centros fuera del país" },
   { href: "/privacidad", label: "Privacidad", icon: "🔒", desc: "Cómo cuidamos tus datos" },

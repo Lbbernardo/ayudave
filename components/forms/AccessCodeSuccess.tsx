@@ -34,10 +34,13 @@ export default function AccessCodeSuccess({
               </span>
             )
           ) : (
-            <span className="text-gray-500">
-              Anótala ahora. (No dejaste correo, así que no la enviamos por email.)
-            </span>
+            <span className="text-gray-500">Anótala ahora para poder ingresar.</span>
           )}
+        </p>
+        <p className="mt-4 rounded-xl bg-surface px-4 py-3 text-sm text-gray-600">
+          Para ver tus casos asignados, entra en{" "}
+          <Link href="/mi-ayuda" className="font-semibold text-trust underline">Mis casos</Link>{" "}
+          con tu correo y esta clave.
         </p>
       </Card>
       <div className="flex flex-col gap-2.5 sm:flex-row sm:justify-center">

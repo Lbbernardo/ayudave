@@ -114,9 +114,13 @@ export default function HelperOnboarding({
       setError("Pon tu nombre completo.");
       return;
     }
+    const vEmail = String(data.get("email") || "").trim() || null;
+    if (!vEmail) {
+      setError("Pon tu correo: con él y tu clave entrarás a ver tus casos.");
+      return;
+    }
     setSubmitting(true);
     const fullName = String(data.get("full_name")).trim();
-    const vEmail = String(data.get("email") || "").trim() || null;
     const code = gen4();
     const res = await insertRowReturning("volunteers", {
       full_name: fullName,
@@ -149,9 +153,13 @@ export default function HelperOnboarding({
       setError("Selecciona el tipo de donación.");
       return;
     }
+    const dEmail = String(data.get("email") || "").trim() || null;
+    if (!dEmail) {
+      setError("Pon tu correo: con él y tu clave entrarás a ver tus casos.");
+      return;
+    }
     setSubmitting(true);
     const donorName = String(data.get("donor_name") || "").trim() || null;
-    const dEmail = String(data.get("email") || "").trim() || null;
     const code = gen4();
     const res = await insertRowReturning("donations", {
       donor_name: donorName,
@@ -254,7 +262,7 @@ export default function HelperOnboarding({
           <Card className="space-y-4">
             <FormInput label="Nombre completo" name="full_name" required placeholder="Ej. María Pérez" />
             <FormInput label="Teléfono" name="phone" type="tel" placeholder="+58 414 1234567" hint="Para coordinar. No se muestra públicamente." />
-            <FormInput label="Correo electrónico" name="email" type="email" placeholder="tucorreo@ejemplo.com" hint="Te enviamos tu clave de acceso de 4 dígitos." />
+            <FormInput label="Correo electrónico" name="email" type="email" required placeholder="tucorreo@ejemplo.com" hint="Con tu correo y tu clave de 4 dígitos entrarás a ver tus casos." />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormInput label="Estado" name="state" placeholder="Ej. Carabobo" />
               <FormInput label="Ciudad" name="city" placeholder="Ej. Valencia" />
@@ -308,7 +316,7 @@ export default function HelperOnboarding({
           <Card className="space-y-4">
             <FormInput label="Tu nombre / organización" name="donor_name" placeholder="Ej. Fundación Esperanza" />
             <FormInput label="Teléfono" name="phone" type="tel" placeholder="+58 414 1234567" hint="Para coordinar la entrega. No se muestra públicamente." />
-            <FormInput label="Correo electrónico" name="email" type="email" placeholder="tucorreo@ejemplo.com" hint="Te enviamos tu clave de acceso de 4 dígitos." />
+            <FormInput label="Correo electrónico" name="email" type="email" required placeholder="tucorreo@ejemplo.com" hint="Con tu correo y tu clave de 4 dígitos entrarás a ver tus casos." />
             <Select label="Tipo de donación" name="donation_type" options={DONATION_TYPES} placeholder="Selecciona…" required />
             <Textarea label="Descripción" name="description" placeholder="Ej. 200 litros de agua, 50 cajas de medicinas…" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
