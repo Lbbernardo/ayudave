@@ -1,40 +1,60 @@
 "use client";
 
-// Registro PÚBLICO de voluntarios (sin login). No depende del correo para
-// completarse: la clave de 4 dígitos se muestra en pantalla y, si dejan email,
-// también se envía por correo. El portal /panel sigue disponible para
-// seguimiento con cuenta.
-import { useState } from "react";
 import Link from "next/link";
 import PublicLayout from "@/components/layout/PublicLayout";
 import PageHeader from "@/components/ui/PageHeader";
-import AlertBanner from "@/components/ui/AlertBanner";
-import AccessCodeSuccess from "@/components/forms/AccessCodeSuccess";
-import HelperOnboarding, { type OnboardingResult } from "@/components/portal/HelperOnboarding";
+import Card from "@/components/ui/Card";
 
 export default function VoluntarioPage() {
-  const [result, setResult] = useState<OnboardingResult | null>(null);
-
   return (
     <PublicLayout>
       <PageHeader
-        title="Quiero ser voluntario"
-        subtitle="Regístrate para que el sistema te conecte con quienes necesitan ayuda cerca de ti."
+        title="Soy voluntario"
+        subtitle="Elige una opcion segun tu situacion."
         icon="🤝"
       />
 
-      {result ? (
-        <AccessCodeSuccess result={result} onReset={() => setResult(null)} resetLabel="Registrar otro voluntario" />
-      ) : (
-        <div className="space-y-4">
-          <AlertBanner tone="info">
-            No necesitas crear una cuenta. Si más adelante quieres seguir tus
-            casos con sesión, puedes{" "}
-            <Link href="/panel" className="font-semibold underline">entrar al portal</Link>.
-          </AlertBanner>
-          <HelperOnboarding userId={null} forceMode="volunteer" onDone={(r) => setResult(r ?? null)} />
-        </div>
-      )}
+      <div className="space-y-4 mt-2">
+        {/* Opcion principal: ya registrado */}
+        <Link href="/mi-ayuda" className="block">
+          <Card className="flex items-center gap-4 p-5 active:scale-[0.98] transition-transform cursor-pointer hover:ring-2 hover:ring-trust/30">
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-trust/10 text-4xl">
+              📋
+            </span>
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-gray-900">Ver mis casos</p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Ya me registre y tengo mi clave de 4 digitos
+              </p>
+            </div>
+            <span className="ml-auto text-3xl text-gray-300 shrink-0">›</span>
+          </Card>
+        </Link>
+
+        {/* Opcion secundaria: primera vez */}
+        <Link href="/voluntario/registrar" className="block">
+          <Card className="flex items-center gap-4 p-5 active:scale-[0.98] transition-transform cursor-pointer hover:ring-2 hover:ring-safe/30">
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-safe/10 text-4xl">
+              ✨
+            </span>
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-gray-900">Registrarme</p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Primera vez aqui, aun no tengo clave
+              </p>
+            </div>
+            <span className="ml-auto text-3xl text-gray-300 shrink-0">›</span>
+          </Card>
+        </Link>
+      </div>
+
+      <p className="mt-8 text-center text-sm text-gray-400">
+        Si ya eres voluntario y perdiste tu clave,{" "}
+        <Link href="/voluntario/registrar" className="underline text-trust">
+          vuelvete a registrar con el mismo correo
+        </Link>
+        .
+      </p>
     </PublicLayout>
   );
 }

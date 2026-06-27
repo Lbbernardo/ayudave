@@ -9,13 +9,13 @@ const TABS = [
   { href: "/", label: "Inicio", icon: "🏠" },
   { href: "/oportunidades", label: "Ayudar", icon: "✨" },
   { href: "/reportar-ayuda", label: "Ayuda", icon: "🆘", center: true },
-  { href: "/mi-ayuda", label: "Mis casos", icon: "📋" },
+  { href: "/voluntario", label: "Voluntario", icon: "🤝" },
 ];
 
 // Destinos secundarios que se abren en la hoja "Más".
 const MORE = [
   { href: "/casos/nuevo", label: "Publicar un caso", icon: "📣", desc: "Pide ayuda con varias necesidades" },
-  { href: "/voluntario", label: "Soy voluntario", icon: "🤝", desc: "Regístrate para ayudar" },
+  { href: "/voluntario", label: "Soy voluntario", icon: "🤝", desc: "Entra o regístrate como voluntario" },
   { href: "/centros/login", label: "Centro de acopio", icon: "🏢", desc: "Ingresar o registrar un centro" },
   { href: "/mapa", label: "Mapa", icon: "🗺️", desc: "Reportes, refugios y más" },
   { href: "/estoy-bien", label: "Estoy bien", icon: "✅", desc: "Avisa que estás a salvo" },

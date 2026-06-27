@@ -9,7 +9,6 @@ const navLinks = [
   { href: "/casos/nuevo", label: "Publicar caso" },
   { href: "/voluntario", label: "Soy voluntario" },
   { href: "/centros/login", label: "Centro de acopio" },
-  { href: "/mi-ayuda", label: "Mis casos" },
   { href: "/mapa", label: "Mapa" },
 ];
 
